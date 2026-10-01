@@ -1,0 +1,14 @@
+# Normalize line endings for a consistent cross-platform repo
+* text=auto eol=lf
+
+# Windows launchers must stay CRLF
+*.bat text eol=crlf
+
+# Treat the vendored minified lib and binaries sensibly
+three.min.js text eol=lf
+*.exe binary
+*.dll binary
+*.png binary
+*.ico binary
+*.ff binary
+*.xpak binary

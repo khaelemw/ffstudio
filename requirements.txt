@@ -1,0 +1,3 @@
+numpy>=1.24        # image and mesh decoding
+Pillow>=10.0       # texture decode/encode
+pywebview>=4.0     # optional: desktop window (the browser version works without it)

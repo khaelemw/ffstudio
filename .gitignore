@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# PyInstaller build output
+build/
+dist/
+*.manifest
+
+# FF Studio runtime cache (regenerated on demand; install-specific, some files are large)
+_studio_cache/
+
+# FF Studio build outputs (drop-in fastfiles / xpaks produced by the app)
+*.studio.ff
+*.studio.xpak
+
+# External tools that are downloaded/built separately, not committed
+hksc/
+tools/
+acts/
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS cruft
+.DS_Store
+Thumbs.db

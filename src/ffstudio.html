@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FF Studio</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root{
+    --bg:#1e1e1e; --bg2:#252526; --bg3:#2d2d30; --line:#3e3e42; --fg:#d4d4d4; --fg2:#9da3ab;
+    --accent:#0e639c; --accent2:#1177bb; --ok:#4ec9b0; --bad:#f14c4c; --warn:#e5c07b;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);
+    font:13px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  #app{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
+  header{background:var(--bg3);border-bottom:1px solid var(--line);padding:8px 12px;display:flex;
+    gap:10px;align-items:center;flex-wrap:wrap}
+  header .logo{font-weight:700;letter-spacing:.5px;color:#fff}
+  header .logo b{color:var(--accent2)}
+  input[type=text]{background:#1b1b1b;border:1px solid var(--line);color:var(--fg);border-radius:4px;
+    padding:5px 8px;font:inherit;min-width:280px}
+  button{background:var(--accent);border:0;color:#fff;border-radius:4px;padding:6px 12px;cursor:pointer;font:inherit}
+  button:hover{background:var(--accent2)} button:disabled{opacity:.45;cursor:default}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--fg)}
+  button.ghost:hover{background:var(--bg2)}
+  .pills{display:flex;gap:6px;margin-left:auto;align-items:center}
+  .pill{font-size:11px;padding:3px 8px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);color:var(--fg2)}
+  .pill.ok{color:var(--ok);border-color:#2c4c46} .pill.bad{color:var(--bad);border-color:#5a2a2a}
+  main{display:grid;grid-template-columns:auto 244px 1fr;min-height:0}
+  /* activity bar (VS Code-style far-left type rail) */
+  #actbar{width:46px;background:var(--bg3);border-right:1px solid var(--line);display:flex;flex-direction:column;
+    align-items:center;padding:6px 0;gap:2px;overflow-y:auto;overflow-x:hidden}
+  #actbar::-webkit-scrollbar{width:0}
+  .act{position:relative;width:38px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    border-radius:7px;font-size:17px;color:var(--fg2);flex:0 0 auto;user-select:none}
+  .act:hover{background:var(--bg2);color:var(--fg)}
+  .act.on{color:#fff;background:var(--bg2);box-shadow:inset 2px 0 0 var(--accent2)}
+  .act.dim{opacity:.42}
+  .act .badge{position:absolute;bottom:2px;right:1px;font-size:8px;line-height:1;background:var(--accent2);color:#04121e;
+    border-radius:8px;padding:1px 3px;font-weight:700;font-family:Consolas,monospace}
+  .act .badge.zero{background:var(--line);color:var(--fg2)}
+  .act .tip{position:absolute;left:44px;top:50%;transform:translateY(-50%);white-space:nowrap;background:#000;color:#fff;
+    font-size:11px;padding:3px 8px;border-radius:5px;pointer-events:none;opacity:0;transition:opacity .1s;z-index:50;
+    border:1px solid var(--line)}
+  .act:hover .tip{opacity:1}
+  .actsep{width:24px;height:1px;background:var(--line);margin:4px 0;flex:0 0 auto}
+  #sidehead{padding:9px 12px 7px;display:flex;align-items:baseline;gap:8px;border-bottom:1px solid var(--line)}
+  #sidetitle{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:#fff;font-weight:600}
+  #sidecount{font-size:11px;color:var(--fg2);font-family:Consolas,monospace}
+  #side{background:var(--bg2);border-right:1px solid var(--line);overflow:auto;min-height:0}
+  #side .h{padding:8px 12px;color:var(--fg2);text-transform:uppercase;font-size:11px;letter-spacing:.5px}
+  #tree{padding:0 0 12px}
+  .file{padding:4px 12px 4px 22px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    color:var(--fg);border-left:2px solid transparent}
+  .file:hover{background:var(--bg3)} .file.active{background:#37373d;border-left-color:var(--accent2)}
+  .file .dot{color:var(--warn);margin-left:4px}
+  #center{display:grid;grid-template-rows:auto 1fr;min-width:0;min-height:0;position:relative}
+  #tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--line);overflow:auto}
+  .tab{padding:7px 12px;border-right:1px solid var(--line);cursor:pointer;color:var(--fg2);white-space:nowrap}
+  .tab.active{background:var(--bg);color:#fff} .tab .x{margin-left:8px;opacity:.6}
+  #ed{min-height:0;min-width:0}
+  #welcome{padding:40px;color:var(--fg2);max-width:680px}
+  #viewer{position:absolute;inset:0;top:auto;height:100%;overflow:auto;background:var(--bg);padding:0;z-index:5}
+  #viewer .vhead{padding:6px 12px;border-bottom:1px solid var(--line);color:var(--fg2);font-size:12px;display:flex;gap:10px;align-items:center}
+  #viewer .vbody{padding:12px;overflow:auto}
+  #viewer img{image-rendering:pixelated;max-width:100%;border:1px solid var(--line)}
+  #viewer pre{white-space:pre-wrap;font-family:Consolas,monospace;font-size:12px;color:var(--fg)}
+  #viewer .k{color:var(--fg2)} #viewer .s{color:#9cdcfe}
+  /* fx sampled-curve visualization */
+  .fxel{border:1px solid var(--line);border-radius:6px;margin:0 0 14px;background:var(--bg2)}
+  .fxel .eh{padding:6px 10px;border-bottom:1px solid var(--line);color:#fff;font-size:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .fxel .eh .tag{font-size:10px;color:var(--fg2);border:1px solid var(--line);border-radius:8px;padding:1px 7px;text-transform:uppercase;letter-spacing:.5px}
+  .fxel .eb{display:flex;gap:16px;flex-wrap:wrap;padding:10px}
+  .fxc{display:flex;flex-direction:column;gap:4px}
+  .fxc .cl{color:var(--fg2);font-size:11px}
+  .fxcolorstrip{height:26px;border-radius:4px;border:1px solid var(--line);width:220px}
+  .fxc svg{background:#141414;border:1px solid var(--line);border-radius:4px}
+  .fxnote{color:var(--warn);font-size:11px;padding:2px 10px 10px}
+  #viewer .fxtoggle{cursor:pointer;color:var(--accent2);font-size:12px;margin:0 0 10px;display:inline-block}
+  /* HKS lua disassembly view */
+  .luahdr{color:var(--fg2);font-size:12px;margin:0 0 10px}
+  .luahdr b{color:var(--fg)}
+  .luasec{margin:0 0 8px}
+  .luasec>.h{cursor:pointer;color:var(--accent2);font-size:12px;padding:4px 0;user-select:none}
+  .luasec>.h:hover{color:var(--ok)}
+  .luabody{max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:4px;background:#141414}
+  table.disc{border-collapse:collapse;font-family:Consolas,monospace;font-size:12px;width:100%}
+  table.disc td,table.disc th{padding:1px 8px;text-align:left;white-space:nowrap}
+  table.disc th{position:sticky;top:0;background:var(--bg3);color:var(--fg2);font-weight:600;border-bottom:1px solid var(--line)}
+  table.disc td.op{color:#c586c0} table.disc td.idx{color:var(--fg2)} table.disc td.k{color:#9cdcfe}
+  table.disc tr:hover{background:#1e1e1e}
+  .luawarn{color:var(--warn);font-size:11px;margin:6px 0}
+  pre.luasrc{margin:0 0 8px;padding:8px 10px;background:#141414;border:1px solid var(--line);border-radius:4px;
+    font-family:Consolas,monospace;font-size:12px;line-height:1.45;color:#d4d4d4;overflow:auto;max-height:420px;white-space:pre}
+  #pane-assets input{width:calc(100% - 16px);margin:8px;padding:4px 6px;background:var(--bg);color:var(--fg);border:1px solid var(--line)}
+  #assetlist .ahdr{padding:4px 12px;color:var(--fg2);text-transform:uppercase;font-size:10px;letter-spacing:.5px;margin-top:4px}
+  #assetlist .arow{padding:3px 12px 3px 22px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+  #assetlist .arow:hover{background:var(--bg2)}
+  #assetlist .arow.nolink{cursor:default;color:var(--fg2)} #assetlist .arow.nolink:hover{background:transparent}
+  .aorigin{padding:7px 12px;font-size:11px;color:var(--fg2);border-bottom:1px solid var(--line);background:var(--bg)}
+  .aorigin b{color:#fff}
+  .ahdr2{padding:9px 12px 3px;color:#fff;font-size:11px;font-weight:600}
+  .badge-custom{color:var(--ok)} .badge-base{color:var(--fg2)}
+  .linktoggle{cursor:pointer;color:var(--accent2);padding:8px 12px;font-size:12px;display:block;border-top:1px solid var(--line);margin-top:6px}
+  .linktoggle:hover{color:var(--ok)}
+  /* ---- assets tree ---- */
+  #assetlist{font-size:12px}
+  .asum{padding:10px 12px;border-bottom:1px solid var(--line);background:var(--bg)}
+  .asum .asumt{font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .asum .asumc{font-size:11px;color:var(--fg2);margin-top:3px}
+  .badge-custom{color:var(--ok);font-weight:600} .badge-base{color:var(--accent2);font-weight:600}
+  .asec{display:flex;align-items:center;gap:7px;padding:8px 12px;cursor:pointer;color:#fff;font-size:11px;font-weight:600;
+    letter-spacing:.3px;user-select:none;border-top:1px solid var(--line);background:var(--bg3)}
+  .asec:hover{background:#2d2d33} .asec .asect{flex:1} .asec .cnt{color:var(--fg2);font-weight:400;font-size:11px}
+  .asec .arw{color:var(--accent2);width:10px;text-align:center;font-size:10px}
+  .secbody{padding:2px 0 6px}
+  .tgrp{display:flex;align-items:center;gap:6px;padding:3px 12px 3px 18px;cursor:pointer;color:var(--fg2);user-select:none}
+  .tgrp:hover{background:var(--bg2);color:#fff}
+  .tgrp .arw{color:var(--fg2);width:8px;text-align:center;font-size:9px}
+  .tgrp .tgt{flex:1;text-transform:capitalize} .tgrp .cnt{color:var(--fg2);opacity:.65;font-size:10px}
+  .tgrp.novw{cursor:default} .tgrp.novw:hover{background:transparent;color:var(--fg2)}
+  #assetlist .arow{padding:2px 12px 2px 32px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--fg)}
+  #assetlist .arow:hover{background:var(--bg2)}
+  #assetlist .arow.nolink{cursor:default;color:var(--fg2);font-style:italic}
+  #assetlist .arow.nolink:hover{background:transparent}
+  #assetlist .arow .ob{font-size:9px;color:var(--ok);margin-left:6px;vertical-align:middle;font-weight:600}
+  /* script rows */
+  #assetlist .file{padding:3px 12px 3px 32px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    border-left:2px solid transparent}
+  #assetlist .file:hover{background:var(--bg3)} #assetlist .file.active{background:#37373d;border-left-color:var(--accent2)}
+  #assetlist .file .dot{color:var(--warn);margin-left:4px}
+  .rfile{display:flex;gap:9px;padding:6px 12px 6px 18px;align-items:flex-start}
+  .rfile .ri{font-size:14px;line-height:1.2} .rfile .rfn{color:var(--fg)} .rfile .rfd{font-size:10px;color:var(--fg2);margin-top:1px}
+  .rfile.dim{opacity:.6}
+  /* activity-bar sidebar: type list rows */
+  #assetlist .arow{display:flex;align-items:center;gap:6px;padding:3px 10px 3px 14px}
+  #assetlist .arow .an{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #assetlist .arow .ffb{font-size:9px;color:var(--accent2);background:var(--bg3);border:1px solid var(--line);border-radius:3px;padding:0 4px;flex:0 0 auto}
+  #assetlist .arow .expx{flex:0 0 auto;opacity:0;color:var(--fg2);font-size:12px;padding:0 2px;cursor:pointer}
+  #assetlist .arow:hover .expx{opacity:.7} #assetlist .arow .expx:hover{opacity:1;color:var(--ok)}
+  .grphdr{display:flex;justify-content:space-between;align-items:center;padding:7px 12px 4px;font-size:10px;
+    text-transform:uppercase;letter-spacing:.5px;color:var(--fg2);position:sticky;top:0;background:var(--bg2);z-index:1}
+  .grphdr span{font-family:Consolas,monospace;opacity:.7}
+  /* mesh LOD groups (collapse a model's col/lod0..N into one expandable row) */
+  .mgrp{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 10px;cursor:pointer;font-size:12.5px;color:var(--fg)}
+  .mgrp:hover{background:var(--bg2)}
+  .mgrp .arw{width:12px;flex:0 0 auto;color:var(--fg2);font-size:10px}
+  .mgrp .mgn{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mgrp .mgc{flex:0 0 auto;font-family:Consolas,monospace;font-size:10px;color:var(--fg2);background:var(--bg3);border-radius:9px;padding:1px 7px}
+  .mgbody .arow{padding-left:30px;color:var(--fg2);font-size:12px}
+  .mgbody .arow .an{font-family:Consolas,monospace}
+  /* overview */
+  .ovsum{padding:11px 12px;background:var(--bg);border-bottom:1px solid var(--line);font-size:12px;color:var(--fg2)}
+  .ovsum b{color:#fff;font-size:14px}
+  .ovsec{padding:10px 12px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--fg2)}
+  .ovff{display:flex;gap:9px;padding:5px 12px;align-items:flex-start}
+  .ovff .ri{font-size:14px;flex:0 0 auto} .ovff .ovtx{min-width:0}
+  .ovff .rfn{color:var(--fg);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ovff .rfd{font-size:10px;color:var(--fg2);margin-top:1px}
+  .ovtypes{padding:0 8px}
+  .ovtype{display:flex;justify-content:space-between;align-items:center;padding:3px 6px;border-radius:4px;font-size:12px;cursor:pointer}
+  .ovtype[data-goto]:hover{background:var(--bg2)} .ovtype .cnt{font-family:Consolas,monospace;color:var(--fg2);font-size:11px}
+  .ovtype.u{opacity:.5;cursor:default} .ovtype.u .cnt i{color:var(--warn);font-style:normal;font-size:9px}
+  /* toggle studio ff */
+  .tgcard{margin:6px 12px 16px;padding:11px;background:var(--bg);border:1px solid var(--line);border-radius:8px}
+  .tgrow{display:flex;align-items:center;gap:7px;font-size:12px;color:#fff}
+  .tgdot{width:8px;height:8px;border-radius:50%;background:var(--fg2)}
+  .tgdot.studio{background:var(--ok)} .tgdot.pristine{background:var(--accent2)}
+  .tgd{font-size:11px;color:var(--fg2);margin:6px 0 9px;line-height:1.4}
+  #tgbtn{width:100%;padding:7px;background:var(--accent2);color:#04121e;border:none;border-radius:5px;cursor:pointer;font-weight:600;font-size:12px}
+  #tgbtn:disabled{background:var(--line);color:var(--fg2);cursor:not-allowed}
+  .tgnote{font-size:10px;color:var(--warn);margin-top:8px;line-height:1.4}
+  /* unsupported + struct viewer */
+  .unsup{padding:26px 20px;text-align:center;color:var(--fg2)} .unsup-i{font-size:32px;margin-bottom:8px}
+  .unsup b{color:var(--fg);display:block;margin-bottom:6px} .unsup p{font-size:12px;line-height:1.5}
+  .structv .stsec{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--accent2);margin:14px 0 6px}
+  .structv .stsec:first-child{margin-top:0}
+  .strlist{max-height:24vh;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:4px 0}
+  .strow{padding:2px 10px;font-family:Consolas,monospace;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .strow .so{color:var(--fg2);margin-right:8px} .dimtxt{color:var(--fg2);padding:4px 10px}
+  .ptrs{display:flex;flex-wrap:wrap;gap:6px} .ptr{font-family:Consolas,monospace;font-size:11px;color:var(--fg2);border:1px solid var(--line);border-radius:4px;padding:2px 7px}
+  .stnote{font-size:11px;color:var(--fg2);font-weight:400}
+  .vexport{font-size:11px;color:var(--ok);text-decoration:none;border:1px solid #2c4c46;padding:2px 8px;border-radius:4px;margin-left:8px}
+  /* font preview */
+  .fontmeta{color:var(--fg2);font-size:12px;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:8px}
+  .fontmeta b{color:#fff}
+  .fontprev{color:#eee;line-height:1.5} .fontprev>div{margin:6px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fontramp{margin-top:18px;border-top:1px solid var(--line);padding-top:12px;color:#ddd}
+  .fontramp>div{margin:5px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ftag{margin-top:16px;color:var(--fg2);font-size:10px;font-family:var(--mono,monospace)}
+  /* material preview */
+  .matmeta{color:var(--fg2);font-size:12px;margin-bottom:8px}
+  .matshader{color:var(--fg2);font-size:11px;margin-bottom:12px} .matshader code{color:#9cdcfe}
+  .matnote{color:var(--fg2);font-style:italic;padding:12px;border:1px dashed var(--line);border-radius:6px;max-width:520px}
+  .texgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .texcard{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--bg2)}
+  .texthumb{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:
+    conic-gradient(#2a2a2a 0 25%,#1f1f1f 0 50%,#2a2a2a 0 75%,#1f1f1f 0);background-size:20px 20px;color:var(--fg2);font-size:11px}
+  .texthumb img{width:100%;height:100%;object-fit:contain;image-rendering:auto}
+  .texthumb.texfail{color:var(--warn)}
+  .texinfo{padding:6px 8px} .texn{color:#fff;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .texmeta{color:var(--fg2);font-size:10px;margin-top:2px}
+  .texrole{color:var(--ok);font-weight:600}
+  /* techset preview */
+  .tssec{margin-top:16px} .tsh{color:var(--fg2);font-size:11px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px}
+  .tstoggle{cursor:pointer;user-select:none} .tstoggle:hover{color:#fff}
+  .siglist{display:flex;flex-wrap:wrap;gap:6px}
+  .sig{background:var(--bg2);border:1px solid var(--line);border-radius:4px;padding:3px 8px;font-family:Consolas,monospace;font-size:11px}
+  .sig b{color:#9cdcfe} .sigc{color:var(--fg2)}
+  .reslist{display:flex;flex-wrap:wrap;gap:6px}
+  .res{border:1px solid var(--line);border-radius:4px;padding:3px 8px;font-size:11px;background:var(--bg2)}
+  .res-texture{color:#4ec9b0} .res-sampler{color:#e5c07b} .res-cbuffer,.res-tbuffer{color:#c586c0}
+  .shtbl{border-collapse:collapse;font-size:11px;margin-top:6px} .shtbl th,.shtbl td{border:1px solid var(--line);padding:3px 10px;text-align:left}
+  .shtbl th{color:var(--fg2);font-weight:400} .st-vertex{color:#9cdcfe} .st-pixel{color:#4ec9b0} .st-geometry{color:#e5c07b}
+  /* 3D model viewer */
+  .modelmeta{color:var(--fg2);font-size:12px;margin-bottom:8px} .modelmeta b{color:#fff}
+  .sttbl{border-collapse:collapse;font-size:12px;font-family:var(--mono,monospace)}
+  .sttbl th{position:sticky;top:0;background:var(--panel,#1a1a1a);color:var(--fg2);padding:3px 8px;border:1px solid var(--line,#333);font-weight:600}
+  .sttbl td{padding:2px 8px;border:1px solid var(--line,#2a2a2a);white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}
+  .sttbl td.stref{color:var(--fg3,#555);text-align:center}
+  .sttbl td.stamb{color:var(--fg,#ddd);border-bottom:1px dotted #c90}
+  .mhint{margin-left:10px;opacity:.7;font-size:11px} .mhint label{margin-left:6px;cursor:pointer}
+  #modelwrap{width:100%;height:70vh;min-height:360px} #modelcanvas{width:100%;height:100%;display:block;border-radius:6px;touch-action:none;cursor:grab}
+  #modelcanvas:active{cursor:grabbing}
+  /* animation viewer */
+  .animmeta{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:12px;color:var(--fg2);font-size:12px}
+  .animmeta .am b{color:#fff} .animtl{width:100%;max-width:600px;height:auto}
+  .bonelist{max-height:40vh;overflow:auto;border:1px solid var(--line);border-radius:6px;margin-top:6px;font-family:Consolas,monospace;font-size:11px}
+  .brow{padding:2px 10px;display:flex;gap:10px;color:var(--fg)} .brow:nth-child(even){background:var(--bg2)}
+  .brow .bi{color:var(--fg2);min-width:28px;text-align:right}
+  .animval{display:flex;flex-wrap:wrap;gap:8px;margin:-4px 0 12px}
+  .ambadge{font-size:11px;padding:2px 8px;border-radius:10px;border:1px solid var(--line);color:var(--fg2);background:var(--bg2)}
+  .ambadge.ok{color:#7fe0a8;border-color:#2c4c46;background:#16241f}
+  .ambadge.no{color:#e08a8a;border-color:#4c2c2c;background:#241616}
+  .animparts{gap:10px;margin:-6px 0 12px;font-size:11px}
+  #animwrap{position:relative;width:100%;height:56vh;min-height:320px}
+  #animcanvas{width:100%;height:100%;display:block;border-radius:6px;touch-action:none;cursor:grab;background:#15151a}
+  #animcanvas:active{cursor:grabbing}
+  .animhud{position:absolute;top:8px;left:10px;font-family:Consolas,monospace;font-size:11px;color:#9da3ab;pointer-events:none;text-shadow:0 1px 2px #000}
+  .animctl{display:flex;align-items:center;gap:10px;margin:8px 0 4px;flex-wrap:wrap}
+  .animbtn{width:34px;height:28px;border:1px solid var(--line);background:var(--bg2);color:#fff;border-radius:4px;cursor:pointer;font-size:13px}
+  .animbtn:hover{background:var(--bg3)}
+  .animrange{flex:1;min-width:160px;accent-color:var(--accent2)}
+  .animsel{background:var(--bg2);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:3px 6px;font-size:11px}
+  .animchk{color:var(--fg2);font-size:11px;display:flex;align-items:center;gap:4px}
+  #luasrc{width:100%;height:200px;background:#1b1b1b;border:1px solid var(--line);border-radius:4px;color:var(--fg);
+    font-family:Consolas,monospace;font-size:12px;padding:8px;resize:vertical}
+  #welcome h2{color:#fff;font-weight:600}
+  #welcome code{background:var(--bg3);padding:1px 5px;border-radius:3px}
+  footer{background:var(--bg3);border-top:1px solid var(--line)}
+  #buildbar{display:flex;gap:10px;align-items:center;padding:7px 12px}
+  #buildbar .out{color:var(--fg2)}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid #ffffff55;border-top-color:#fff;
+    border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px}
+  @keyframes s{to{transform:rotate(360deg)}}
+  a.dl{color:var(--ok);text-decoration:none;border:1px solid #2c4c46;padding:5px 10px;border-radius:4px}
+  #depbanner{background:#3a2a12;color:var(--warn);padding:8px 12px;border-bottom:1px solid var(--line);display:none}
+  #depbanner ul{margin:6px 0 0;padding-left:18px} #depbanner b{color:#fff}
+  .sidetabs{display:flex;border-bottom:1px solid var(--line)}
+  .stab{flex:1;text-align:center;padding:7px;cursor:pointer;color:var(--fg2);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  .stab.active{color:#fff;box-shadow:inset 0 -2px 0 var(--accent2)}
+  #symfilter{width:calc(100% - 16px);margin:8px}
+  #symlist .sym{padding:3px 12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #symlist .sym:hover{background:var(--bg3)} #symlist .sym .m{color:var(--fg2);font-size:11px}
+  #symlist .sym .fl{color:var(--warn);font-size:10px;margin-left:4px}
+  #btabs{display:flex;background:var(--bg2);border-top:1px solid var(--line)}
+  #btabs[hidden]{display:none}
+  #btabs .bt{padding:5px 12px;cursor:pointer;color:var(--fg2);font-size:12px;border-right:1px solid var(--line)}
+  #btabs .bt.active{background:#141414;color:#fff} #btabs .bt .c{color:var(--warn)}
+  #bottom{height:0;overflow:hidden;transition:height .15s} #bottom.open{height:200px}
+  .bpane{height:200px;overflow:auto;background:#141414;font-family:Consolas,monospace;font-size:12px;padding:8px 12px}
+  .bpane .l{white-space:pre-wrap} .bpane .err{color:var(--bad)} .bpane .ok{color:var(--ok)} .bpane .warn{color:var(--warn)}
+  .row{padding:2px 0;cursor:pointer} .row:hover{background:#222} .row .loc{color:var(--accent2)} .row .k{color:var(--fg2);margin-right:6px}
+  #palette{position:fixed;inset:0;background:#0008;display:none;z-index:50;align-items:flex-start;justify-content:center}
+  #palette.open{display:flex} #palbox{margin-top:80px;width:560px;max-width:90vw;background:var(--bg3);border:1px solid var(--line);border-radius:6px;overflow:hidden;box-shadow:0 8px 30px #000a}
+  #palin{width:100%;border:0;border-bottom:1px solid var(--line);background:#1b1b1b;color:var(--fg);padding:10px 12px;font-size:14px}
+  #palresults{max-height:50vh;overflow:auto} #palresults .p{padding:6px 12px;cursor:pointer} #palresults .p.sel,#palresults .p:hover{background:var(--accent)}
+  #palresults .p .m{color:var(--fg2);font-size:11px;margin-left:8px}
+  /* editor loading overlay */
+  #edloading{position:absolute;inset:34px 0 0 0;display:flex;gap:10px;align-items:center;justify-content:center;
+    background:var(--bg);color:var(--fg2);z-index:5;font-size:13px}
+  #edloading[hidden]{display:none}
+  /* full "preparing fastfile" overlay (shown on Open FF while everything decompiles up front) */
+  #prep{position:absolute;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(120% 120% at 50% 0%,#26262b,var(--bg));}
+  #prep[hidden]{display:none}
+  #prepcard{width:520px;max-width:86vw;background:var(--bg2);border:1px solid var(--line);border-radius:10px;
+    padding:26px 28px;box-shadow:0 12px 40px #000a}
+  #prepcard h3{margin:0 0 3px;color:#fff;font-weight:600;font-size:16px}
+  #prepcard .sub{color:var(--fg2);font-size:12px;margin-bottom:20px;word-break:break-all}
+  #prepbar{height:8px;border-radius:5px;background:#141414;overflow:hidden;border:1px solid var(--line)}
+  #prepfill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--ok));
+    border-radius:5px;transition:width .35s ease}
+  #prepstage{display:flex;justify-content:space-between;margin-top:12px;font-size:12px}
+  #prepstage .st{color:var(--fg)} #prepstage .pct{color:var(--fg2);font-variant-numeric:tabular-nums}
+  #prepdetail{color:var(--fg2);font-size:11px;margin-top:6px;height:14px;overflow:hidden;
+    white-space:nowrap;text-overflow:ellipsis;font-family:Consolas,monospace}
+  #prepsteps{display:flex;gap:6px;margin-top:20px;flex-wrap:wrap}
+  #prepsteps .ps{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--fg2);
+    border:1px solid var(--line);border-radius:10px;padding:3px 9px}
+  #prepsteps .ps.on{color:#fff;border-color:var(--accent2);background:#0e639c33}
+  #prepsteps .ps.done{color:var(--ok);border-color:#2c4c46}
+  #prepsteps .ps.done::before{content:'✓ '}
+  #prepcard.err #prepfill{background:var(--bad)}
+  #prepcard .errmsg{color:var(--bad);font-size:12px;margin-top:14px;display:none;white-space:pre-wrap}
+  #prepcard.err .errmsg{display:block}
+  #prepcard .skipwrap{margin-top:18px;display:flex;justify-content:flex-end}
+  /* FF navigator (workshop/local mod browser) */
+  #nav{position:fixed;inset:0;background:#0009;display:none;z-index:60;align-items:flex-start;justify-content:center}
+  #nav.open{display:flex}
+  #navbox{margin-top:56px;width:680px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;
+    background:var(--bg3);border:1px solid var(--line);border-radius:6px;overflow:hidden;box-shadow:0 8px 30px #000a}
+  #navhead{display:flex;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+  #navhead b{color:#fff} #navhead input{flex:1;min-width:0}
+  #navclose{cursor:pointer;color:var(--fg2);padding:2px 6px} #navclose:hover{color:#fff}
+  #navlist{overflow:auto;padding:4px 0}
+  .navmod{border-bottom:1px solid var(--bg2)}
+  .navmod .nm{padding:8px 12px;cursor:pointer;color:#fff;display:flex;gap:8px;align-items:center}
+  .navmod .nm:hover{background:var(--bg2)}
+  .navmod .nm .caret{color:var(--fg2);width:10px}
+  .navmod .nm .src{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--fg2);border:1px solid var(--line);border-radius:8px;padding:1px 7px}
+  .navmod .nm .cnt{color:var(--fg2);font-size:11px;margin-left:auto}
+  .navmod .ffs{display:none;padding:0 0 6px}
+  .navmod.exp .ffs{display:block} .navmod.exp .nm .caret{transform:rotate(90deg)}
+  .ffrow{padding:5px 12px 5px 34px;cursor:pointer;color:var(--fg);display:flex;gap:8px;align-items:center}
+  .ffrow:hover{background:var(--accent)} .ffrow .sz{margin-left:auto;color:var(--fg2);font-size:11px}
+  .navmod .m,.ffrow.m{color:var(--fg2);padding:10px 12px;cursor:default}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">FF <b>Studio</b></div>
+    <button class="ghost" id="navbtn">📂 Browse mods…</button>
+    <button class="ghost" id="browsebtn" style="display:none">📄 File…</button>
+    <input id="ffpath" type="text" placeholder="path to zm_mod.ff (or drop a file)…" spellcheck="false">
+    <button id="openbtn">Open FF</button>
+    <div class="pills" id="pills"></div>
+  </header>
+  <div id="depbanner"></div>
+  <main>
+    <div id="actbar"></div>
+    <div id="side">
+      <div id="sidehead"><span id="sidetitle">Overview</span><span id="sidecount"></span></div>
+      <div id="pane-assets"><input id="assetfilter" type="text" placeholder="filter…" spellcheck="false"><div id="assetlist"></div></div>
+      <div id="pane-symbols" hidden>
+        <input id="symfilter" type="text" placeholder="filter functions…  (Ctrl+P for quick open)" spellcheck="false">
+        <div id="symlist"></div>
+      </div>
+    </div>
+    <div id="center">
+      <div id="tabs"></div>
+      <div id="ed"></div>
+      <div id="viewer" hidden></div>
+      <div id="edloading" hidden><span class="spin"></span> <span id="edloadmsg">Decompiling…</span></div>
+      <div id="prep" hidden><div id="prepcard">
+        <h3>Preparing fastfile<span class="spin" style="margin-left:8px"></span></h3>
+        <div class="sub" id="prepsub"></div>
+        <div id="prepbar"><div id="prepfill"></div></div>
+        <div id="prepstage"><span class="st" id="prepst">Starting…</span><span class="pct" id="preppct">0%</span></div>
+        <div id="prepdetail"></div>
+        <div id="prepsteps">
+          <span class="ps" data-s="decompile">Decompile scripts</span>
+          <span class="ps" data-s="autonames">Resolve names</span>
+          <span class="ps" data-s="symbols">Index functions</span>
+          <span class="ps" data-s="assets">Scan assets</span>
+        </div>
+        <div class="errmsg" id="preperr"></div>
+        <div class="skipwrap"><button class="ghost" id="prepskip">Skip &amp; edit now</button></div>
+      </div></div>
+      <div id="welcome">
+        <h2>Open a fastfile</h2>
+        <p>Browse for a <code>.ff</code> or paste its path, then click <b>Open FF</b>.<br>
+        Click an asset to view it. Edit a script and click <b>Build</b> to write a new <code>.ff</code>.</p>
+      </div>
+    </div>
+  </main>
+  <footer>
+    <div id="buildbar">
+      <button id="buildbtn" disabled>Build</button>
+      <span class="out" id="outinfo"></span>
+      <button class="ghost" id="logtoggle" style="margin-left:auto">▲ Panel</button>
+    </div>
+    <div id="btabs" hidden>
+      <span class="bt active" data-p="log">Log</span>
+      <span class="bt" data-p="problems">Problems <span class="c" id="probcount"></span></span>
+      <span class="bt" data-p="refs">References</span>
+    </div>
+    <div id="bottom">
+      <div class="bpane" id="log"></div>
+      <div class="bpane" id="problems" hidden></div>
+      <div class="bpane" id="refs" hidden></div>
+    </div>
+  </footer>
+</div>
+<div id="palette"><div id="palbox"><input id="palin" type="text" placeholder="Go to symbol…" spellcheck="false"><div id="palresults"></div></div></div>
+<div id="nav"><div id="navbox">
+  <div id="navhead"><b>Browse installed mods</b><input id="navfilter" type="text" placeholder="filter by mod or ff name…" spellcheck="false"><span id="navclose" title="Close">✕</span></div>
+  <div id="navlist"></div>
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+<script>
+const $=s=>document.querySelector(s), api=(p,b)=>fetch(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
+let FF=null, editor=null, monacoReady=false, nameMap={};
+const models={}, tabs=[]; let active=null;
+const HEXTOK=/^(function|var|namespace|method|hash|script)_[0-9a-fA-F]+$/;
+
+// ---- Monaco (jsdelivr; worker via blob proxy) ----
+const MB='https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/';
+window.MonacoEnvironment={getWorkerUrl:()=>{
+  const src=`self.MonacoEnvironment={baseUrl:'${MB}'};importScripts('${MB}vs/base/worker/workerMain.js');`;
+  return URL.createObjectURL(new Blob([src],{type:'text/javascript'}));
+}};
+require.config({paths:{vs:MB+'vs'}});
+require(['vs/editor/editor.main'],()=>{
+  monaco.languages.register({id:'gsc'});
+  monaco.languages.setMonarchTokensProvider('gsc',{
+    keywords:['function','autoexec','private','if','else','for','foreach','while','switch','case','default',
+      'return','break','continue','wait','waittill','waittillframeend','endon','notify','thread','self','level',
+      'game','world','undefined','true','false','isdefined','new','in','constructor','destructor','var'],
+    tokenizer:{root:[
+      [/\/\/.*/,'comment'],[/\/\*/,'comment','@c'],
+      [/#(using|namespace|insert|define|precache)\b/,'keyword'],
+      [/#"[^"]*"/,'string'],[/"/,'string','@s'],
+      [/&?\bfunction_[0-9a-fA-F]+\b/,'type'],[/\b(var|namespace)_[0-9a-fA-F]+\b/,'type'],
+      [/[a-zA-Z_]\w*(?=\s*\()/,'identifier'],
+      [/[a-zA-Z_]\w*/,{cases:{'@keywords':'keyword','@default':'identifier'}}],
+      [/\d[\d.]*/,'number'],[/[{}()\[\]]/,'@brackets'],
+    ],c:[[/[^*/]+/,'comment'],[/\*\//,'comment','@pop'],[/./,'comment']],
+     s:[[/[^"]+/,'string'],[/"/,'string','@pop']]}
+  });
+  editor=monaco.editor.create($('#ed'),{theme:'vs-dark',automaticLayout:true,fontSize:13,minimap:{enabled:true},
+    value:'',language:'gsc',readOnly:true});
+  editor.addAction({id:'ff.rename',label:'Rename symbol (alias hash → friendly name)',
+    keybindings:[monaco.KeyCode.F2],contextMenuGroupId:'1_modification',contextMenuOrder:1,run:()=>renameSymbol()});
+  // F12 / Shift+F12 / ctrl-click are served by real Monaco providers (native peek UI) — see below.
+  // Keep a panel-based "Find All References" for a persistent, cross-file clickable list.
+  editor.addAction({id:'ff.findrefsPanel',label:'Find All References (side panel)',
+    contextMenuGroupId:'navigation',contextMenuOrder:3,run:()=>findRefs()});
+  editor.addAction({id:'ff.quickopen',label:'Go to Symbol…',keybindings:[monaco.KeyMod.CtrlCmd|monaco.KeyCode.KeyP],
+    run:()=>openPalette()});
+  // ---- native Go-to-Definition / Find-References / ctrl-click, backed by /api/xrefs ----
+  monaco.languages.registerDefinitionProvider('gsc',{provideDefinition:async(model,pos)=>{
+    const w=model.getWordAtPosition(pos); if(!w||!FF)return null;
+    const r=await api('/api/xrefs',{ff:FF.ff,symbol:w.word}); const d=(r.refs||[]).find(x=>x.kind==='def');
+    if(!d)return null; const m=await ensureModel(d.script); if(!m)return null;
+    return {uri:m.uri,range:new monaco.Range(d.line,1,d.line,1)};}});
+  monaco.languages.registerReferenceProvider('gsc',{provideReferences:async(model,pos)=>{
+    const w=model.getWordAtPosition(pos); if(!w||!FF)return []; const r=await api('/api/xrefs',{ff:FF.ff,symbol:w.word});
+    const refs=r.refs||[]; const models={};
+    for(const s of [...new Set(refs.map(x=>x.script))]){const mm=await ensureModel(s); if(mm)models[s]=mm;}
+    return refs.filter(x=>models[x.script]).map(x=>({uri:models[x.script].uri,
+      range:new monaco.Range(x.line,1,x.line,(x.text?x.text.length:1)+1)}));}});
+  // route cross-file "open" (go-to-def into another script, or clicking a peek result) to our tabs
+  if(monaco.editor.registerEditorOpener) monaco.editor.registerEditorOpener({openCodeEditor(_s,resource,sel){
+    const name=decodeURIComponent(resource.path).replace(/^\/+/,'');
+    if(!FF||!FF.scripts.includes(name))return false;
+    goTo(name, sel?(sel.startLineNumber||sel.lineNumber||1):1); return true;}});
+  $('#ed').addEventListener('dblclick',()=>setTimeout(()=>{const w=wordAtCursor();
+    if(w&&(HEXTOK.test(w)||Object.values(nameMap).includes(w))) renameSymbol();},60));
+  monacoReady=true;
+});
+function wordAtCursor(){if(!active)return null;const m=tabs.find(t=>t.name===active).model;
+  const w=m.getWordAtPosition(editor.getPosition());return w?w.word:null;}
+async function renameSymbol(){
+  const old=wordAtCursor(); if(!old)return;
+  const isHex=HEXTOK.test(old), isAlias=Object.values(nameMap).includes(old);
+  if(!isHex&&!isAlias){log("'"+old+"' is already a plain name. Only hashed names (function_/var_/namespace_…) can be renamed.",'err');return;}
+  const nw=(prompt(`Rename “${old}” to a friendly name (applies everywhere; reverts to the hash on build):`, isAlias?old:'')||'').trim();
+  if(!nw||nw===old)return;
+  const r=await api('/api/rename',{ff:FF.ff,old,new:nw});
+  if(r.error){log('rename: '+r.error,'err');return;}
+  nameMap=r.names;
+  const re=new RegExp('\\b'+old.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','g');
+  tabs.forEach(t=>{const v=t.model.getValue();const nv=v.replace(re,nw);if(nv!==v)t.model.setValue(nv);});
+  log('renamed '+old+' → '+nw+' (builds to the same hash)','ok');
+}
+
+// ---- deps ----
+async function loadDeps(){
+  const d=await fetch('/api/deps').then(r=>r.json());
+  const order=[['acts','ACTS'],['modtools','Mod Tools'],['share_raw','share/raw']];
+  $('#pills').innerHTML=order.map(([k,l])=>`<span class="pill ${d[k].ok?'ok':'bad'}">${d[k].ok?'✓':'✕'} ${l}</span>`).join('');
+  const miss=order.filter(([k])=>!d[k].ok);
+  const bn=$('#depbanner');
+  if(miss.length){ bn.style.display='block';
+    const linkify=s=>esc(s).replace(/(https?:\/\/[^\s]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
+    bn.innerHTML='<b>Optional tools not found — asset viewing works, but GSC build is disabled until these are set up:</b><ul>'+
+      miss.map(([k,l])=>`<li><b>${l}:</b> ${linkify(d[k].hint)}</li>`).join('')+'</ul>'; }
+  else bn.style.display='none';
+  window.__depsOk = miss.length===0;
+}
+
+// ---- open ff ----
+$('#openbtn').onclick=openFF;
+$('#ffpath').addEventListener('keydown',e=>{if(e.key==='Enter')openFF();});
+document.body.addEventListener('dragover',e=>e.preventDefault());
+document.body.addEventListener('drop',e=>{e.preventDefault(); const f=e.dataTransfer.files[0]; if(f&&f.path){$('#ffpath').value=f.path; openFF();}});
+function showLoading(msg){$('#edloadmsg').textContent=msg||'Loading…';$('#edloading').hidden=false;}
+function hideLoading(){$('#edloading').hidden=true;}
+
+// ---- first-open preparation: decompile everything up front with a real progress bar ----
+// open_ff only lists scripts; the heavy work (ACTS decompiling every script, building the hash→name
+// map, indexing symbols, scanning assets) is driven here so it happens once, visibly, instead of
+// stalling silently on the first script/symbol/asset click.
+const PREP_STEPS=['decompile','autonames','symbols','assets'];
+const PREP_PCT={start:2,decompile:[5,80],autonames:85,symbols:90,assets:96,done:100,error:100};
+let prepPoll=null;
+function setPrep(p){
+  const st=p.stage||'start';
+  let pct;
+  if(st==='decompile'){const[a,b]=PREP_PCT.decompile; pct=a+(p.n?(p.i/p.n)*(b-a):0);}
+  else pct=PREP_PCT[st]!=null?PREP_PCT[st]:2;
+  $('#prepfill').style.width=pct.toFixed(1)+'%'; $('#preppct').textContent=Math.round(pct)+'%';
+  const label={start:'Reading fastfile…',decompile:`Decompiling scripts ${p.i}/${p.n}`,
+    autonames:'Resolving hash names…',symbols:'Indexing functions…',assets:'Scanning assets…',
+    done:'Ready',error:'Error'}[st]||'Working…';
+  $('#prepst').textContent=label;
+  $('#prepdetail').textContent=p.detail||'';
+  const cur=PREP_STEPS.indexOf(st);
+  document.querySelectorAll('#prepsteps .ps').forEach(el=>{
+    const i=PREP_STEPS.indexOf(el.dataset.s); el.classList.remove('on','done');
+    if(st==='done'){el.classList.add('done');}
+    else if(cur<0){/* start: nothing yet */}
+    else if(i<cur){el.classList.add('done');}
+    else if(i===cur){el.classList.add('on');}
+  });
+}
+function hidePrep(){$('#prep').hidden=true; if(prepPoll){clearInterval(prepPoll);prepPoll=null;}}
+function prepareFF(ff){
+  const card=$('#prepcard'); card.classList.remove('err');
+  $('#prepsub').textContent=ff; $('#preperr').textContent='';
+  setPrep({stage:'start',i:0,n:0,detail:'reading fastfile'});
+  $('#prep').hidden=false;
+  api('/api/prepare',{ff});                 // fire-and-forget; progress is polled below
+  if(prepPoll)clearInterval(prepPoll);
+  let stale=0;
+  prepPoll=setInterval(async()=>{
+    let p; try{ p=await fetch('/api/progress?ff='+encodeURIComponent(ff)).then(r=>r.json()); }catch(e){ return; }
+    if(p.stage==='idle'){ if(++stale>8){hidePrep();} return; }   // server forgot / never started
+    setPrep(p);
+    if(p.done){
+      clearInterval(prepPoll); prepPoll=null;
+      if(p.stage==='error'){ card.classList.add('err'); $('#preperr').textContent=p.error||'preparation failed';
+        $('#prepst').textContent='Error'; log('prepare error: '+(p.error||''),'err');
+        setTimeout(hidePrep,4000); }
+      else { log(`Opened ${FF?FF.scripts.length:''} scripts${p.assets!=null?', '+p.assets+' assets':''}`,'ok');
+        setTimeout(hidePrep,450); }
+    }
+  },400);
+}
+async function openFF(){
+  const ff=$('#ffpath').value.trim(); if(!ff)return;
+  const base=ff.split(/[\\/]/).pop();
+  log('opening '+ff+' …'); showLoading('Opening '+base+' …');
+  let r; try{ r=await api('/api/open',{ff}); } finally { hideLoading(); }
+  if(r.error){log('ERR: '+r.error,'err');return;}
+  FF=r; nameMap=r.names||{}; SYMS=[]; ASSETS=[]; SCRIPTS=r.scripts||[]; if(typeof hideViewer==='function')hideViewer(); $('#welcome').style.display='none';
+  log(`Opened: ${r.scripts.length} scripts, ${(r.payload/1048576).toFixed(1)} MB`+(r.is_base?' (base game, browse-only)':''),'ok');
+  updateBuild();
+  await loadAssets();                       // load all the mod's ffs into the workspace (activity bar + overview)
+  if(!r.is_base) prepareFF(r.ff);           // mods: decompile every script up front. base ffs: skip (assets load
+                                            // instantly; base scripts still decompile lazily when a script is clicked)
+}
+$('#prepskip').onclick=()=>hidePrep();       // let the user dive in; prepare keeps running server-side
+
+// ---- open/decompile a script ----
+function uriFor(name){return monaco.Uri.parse('ff:///'+name);}
+// return the model for `name`, creating it (decompile) if needed; used by tabs AND the xref providers
+// so a definition/reference peek can render even for a script the user hasn't opened as a tab.
+async function ensureModel(name){
+  const t=tabs.find(t=>t.name===name); if(t)return t.model;
+  const existing=monaco.editor.getModel(uriFor(name)); if(existing)return existing;
+  const r=await api('/api/decompile',{ff:FF.ff,name});
+  if(r.error){log('ERR: '+r.error,'err');return null;}
+  return monaco.editor.createModel(r.source,'gsc',uriFor(name));
+}
+async function openScript(name){
+  let f=tabs.find(t=>t.name===name);
+  if(!f){
+    log('decompiling '+name+' …'); showLoading('Decompiling '+name.split('/').pop()+' …');
+    let model; try{ model=await ensureModel(name); } finally { hideLoading(); }
+    if(!model)return;
+    f={name,model,dirty:false}; tabs.push(f);
+    model.onDidChangeContent(()=>{f.dirty=true;renderTabs();renderTree();updateBuild();scheduleDiag();});
+  }
+  active=name; editor.setModel(f.model); editor.updateOptions({readOnly:false});
+  hideViewer();
+  renderTabs(); renderTree(); updateBuild();
+}
+function closeTab(name){const i=tabs.findIndex(t=>t.name===name);if(i<0)return;tabs[i].model.dispose();tabs.splice(i,1);
+  if(active===name){active=tabs.length?tabs[tabs.length-1].name:null; if(active){editor.setModel(tabs.find(t=>t.name===active).model);}else{editor.setModel(monaco.editor.createModel('','gsc'));editor.updateOptions({readOnly:true});}}
+  renderTabs();renderTree();updateBuild();}
+function renderTabs(){$('#tabs').innerHTML=tabs.map(t=>`<div class="tab ${t.name===active?'active':''}" data-n="${t.name}">${t.name.split('/').pop()}${t.dirty?' •':''}<span class="x" data-x="${t.name}">✕</span></div>`).join('');
+  $('#tabs').querySelectorAll('.tab').forEach(el=>el.onclick=e=>{if(e.target.dataset.x)closeTab(e.target.dataset.x);else openScript(el.dataset.n);});}
+function renderTree(){document.querySelectorAll('#assetlist .file').forEach(el=>{const t=tabs.find(t=>t.name===el.dataset.n);
+  el.classList.toggle('active',el.dataset.n===active); el.innerHTML=el.dataset.n.split('/').pop()+(t&&t.dirty?'<span class="dot">●</span>':'');});}
+
+// ---- build ----
+function updateBuild(){const dirty=tabs.filter(t=>t.dirty); $('#buildbtn').disabled=!(FF&&dirty.length&&window.__depsOk);
+  $('#outinfo').textContent=dirty.length?`${dirty.length} edited script(s) ready to build`:'';}
+$('#buildbtn').onclick=async()=>{
+  const edits={}; tabs.filter(t=>t.dirty).forEach(t=>edits[t.name]=t.model.getValue());
+  if(!Object.keys(edits).length)return;
+  const btn=$('#buildbtn'); btn.disabled=true; btn.innerHTML='<span class="spin"></span> Building…';
+  openBottom('log');
+  log('── build started ──');
+  const r=await api('/api/build',{ff:FF.ff,edits,names:nameMap});
+  (r.log||[]).forEach(l=>log(l));
+  if(r.error){log('BUILD FAILED: '+r.error,'err'); btn.innerHTML='Build'; btn.disabled=false; return;}
+  log('✓ built '+r.out_path+'  ('+r.size.toLocaleString()+' bytes)','ok');
+  r.per_script.forEach(p=>log(`   ${p.script}: ${p.oldlen}→${p.newlen} (+${p.delta}), ${p.patched} pointers patched`));
+  const dl = NATIVE ? `<button class="ghost" id="savebtn">💾 Save a copy…</button>`
+                    : `<a class="dl" href="/api/download?path=${encodeURIComponent(r.out_path)}">⬇ Download new ff</a>`;
+  $('#outinfo').innerHTML=`${dl} &nbsp; <span style="color:var(--fg2)">saved to ${r.out_path}</span>`;
+  if(NATIVE) $('#savebtn').onclick=async()=>{try{const dst=await window.pywebview.api.save_copy(r.out_path, r.out_path.split(/[\\/]/).pop()); if(dst) log('saved copy → '+dst,'ok');}catch(e){log('save failed: '+e,'err');}};
+  btn.innerHTML='Build'; btn.disabled=false;
+  tabs.forEach(t=>t.dirty=false); renderTabs(); renderTree();
+};
+// ---- bottom panel (Log / Problems / References) ----
+function openBottom(pane){$('#bottom').classList.add('open');$('#btabs').hidden=false;showBottom(pane||'log');$('#logtoggle').textContent='▼ Panel';}
+function closeBottomPanel(){$('#bottom').classList.remove('open');$('#btabs').hidden=true;$('#logtoggle').textContent='▲ Panel';}
+function showBottom(pane){['log','problems','refs'].forEach(p=>{$('#'+p).hidden=(p!==pane);});
+  document.querySelectorAll('#btabs .bt').forEach(t=>t.classList.toggle('active',t.dataset.p===pane));}
+$('#logtoggle').onclick=()=>{ if($('#bottom').classList.contains('open')) closeBottomPanel();
+  else { const act=[...document.querySelectorAll('#btabs .bt')].find(t=>t.classList.contains('active')); openBottom(act?act.dataset.p:'log'); } };
+document.querySelectorAll('#btabs .bt').forEach(t=>t.onclick=()=>showBottom(t.dataset.p));
+function log(m,cls){const l=$('#log');const d=document.createElement('div');d.className='l '+(cls||'');d.textContent=m;l.appendChild(d);l.scrollTop=l.scrollHeight;}
+
+// ---- sidebar tabs + Symbols ----
+let SYMS=[], SCRIPTS=[], ASSETS=[], FFS=[], EXPANDED=new Set(), ACTIVE_VIEW='overview';
+// order the activity-bar type icons; unsupported (census-only) types get appended, dimmed
+const ACT_ORDER=['image','material','xmodel','xmodelmesh','xanim','techset','fx','script','rawfile','ttf','kvp'];
+const VIEWABLE=new Set(['image','fx','rawfile','ttf','material','techset','xmodelmesh','xanim','xmodel','script','kvp','stringtable']);
+function selectView(v){
+  ACTIVE_VIEW=v;
+  document.querySelectorAll('#actbar .act').forEach(el=>el.classList.toggle('on',el.dataset.v===v));
+  $('#pane-symbols').hidden = v!=='symbols';
+  $('#pane-assets').hidden = v==='symbols';
+  $('#assetfilter').style.display = (v==='overview')?'none':'';
+  if(v==='symbols'){ $('#sidetitle').textContent='Symbols'; $('#sidecount').textContent=''; if(!SYMS.length) loadSymbols(); return; }
+  renderSide();
+}
+function renderActbar(){
+  const present={};  // type -> count across all ffs
+  ASSETS.forEach(a=>{present[a.type]=(present[a.type]||0)+1;});
+  // census-only (unsupported) types, from the primary inventory census
+  const cen=(window.__inv&&window.__inv.type_census)||{};
+  const scanCen=new Set(ASSETS.map(a=>SCAN2CEN[a.type]||a.type));
+  const unsup=Object.keys(cen).filter(t=>!scanCen.has(t)).sort((a,b)=>cen[b]-cen[a]);
+  let h=`<div class="act ${ACTIVE_VIEW==='overview'?'on':''}" data-v="overview">📁<span class="tip">Overview — file structure</span></div>`
+       +`<div class="act ${ACTIVE_VIEW==='symbols'?'on':''}" data-v="symbols">🔎<span class="tip">Script symbols &amp; search</span></div>`
+       +`<div class="actsep"></div>`;
+  const types=ACT_ORDER.filter(t=>present[t]).concat(Object.keys(present).filter(t=>!ACT_ORDER.includes(t)));
+  types.forEach(t=>{ const n=present[t];
+    h+=`<div class="act ${ACTIVE_VIEW===t?'on':''}" data-v="${t}">${ticon(t)}<span class="badge">${n>999?'999+':n}</span><span class="tip">${tlabel(t)} · ${n}</span></div>`; });
+  if(unsup.length){ h+=`<div class="actsep"></div>`;
+    unsup.forEach(t=>{ h+=`<div class="act dim ${ACTIVE_VIEW==='u:'+t?'on':''}" data-v="u:${t}">${ticon(t)}<span class="badge zero">${cen[t]}</span><span class="tip">${tlabel(t)} · ${cen[t]} · no viewer yet</span></div>`; }); }
+  $('#actbar').innerHTML=h;
+  $('#actbar').querySelectorAll('.act').forEach(el=>el.onclick=()=>selectView(el.dataset.v));
+}
+function hideViewer(){$('#viewer').hidden=true;$('#ed').style.visibility='';}
+function showViewer(head,body){$('#viewer').innerHTML='<div class="vhead">'+head+'</div><div class="vbody">'+body+'</div>';$('#viewer').hidden=false;$('#welcome').style.display='none';}
+async function loadAssets(){if(!FF)return; $('#assetlist').innerHTML='<div class="ahdr">scanning…</div>';
+  // a mod is often several fastfiles (core_mod + zm_mod) — load them all as one workspace
+  let modffs=[{name:FF.ff.split(/[\\/]/).pop(),path:FF.ff}];
+  try{ const mr=await api('/api/modffs',{ff:FF.ff}); if(mr&&mr.ffs&&mr.ffs.length) modffs=mr.ffs; }catch(e){}
+  FFS=[]; ASSETS=[];
+  for(const m of modffs){
+    let inv; try{ inv=await fetch('/api/inventory?ff='+encodeURIComponent(m.path)).then(r=>r.json()); }catch(e){ continue; }
+    if(!inv||inv.error) continue;
+    const label=m.name.replace(/\.ff$/,'');
+    (inv.assets||[]).forEach(a=>{a.ff=m.path; a.ffLabel=label;});
+    FFS.push({ff:m.path,path:m.path,label,name:m.name,size:m.size,inv,scripts:(inv.assets||[]).filter(a=>a.type==='script')});
+    ASSETS.push(...(inv.assets||[]));
+  }
+  window.__inv=FFS[0]?FFS[0].inv:{}; window.__containers=(FFS[0]&&FFS[0].inv.containers)||[];
+  renderActbar();
+  selectView(ACTIVE_VIEW);
+  refreshFFState();
+}
+// dispatch the side pane by active view
+function renderSide(){
+  const v=ACTIVE_VIEW;
+  if(v==='overview'){ $('#sidetitle').textContent='Overview'; renderOverview(); return; }
+  if(v.startsWith('u:')){ const t=v.slice(2); $('#sidetitle').textContent=tlabel(t);
+    const cen=(window.__inv&&window.__inv.type_census)||{};
+    $('#sidecount').textContent=(cen[t]||0)+' · no viewer';
+    $('#assetlist').innerHTML=`<div class="unsup"><div class="unsup-i">${ticon(t)}</div><b>${tlabel(t)}</b><p>${cen[t]||0} in this fastfile. There's no viewer for this asset type yet.</p></div>`;
+    return; }
+  renderTypeList(v);
+}
+// ---- type presentation: scan-type <-> census-type mapping, friendly labels, icons -----------------
+const SCAN2CEN={xanim:'xanimparts', script:'scriptparsetree', kvp:'keyvaluepairs'};   // scan name -> asset-list name
+const TLABEL={image:'Images', material:'Materials', xmodelmesh:'Meshes', xmodel:'Models',
+  techset:'Techsets', xanim:'Animations', xanimparts:'Animations', fx:'Effects (FX)', script:'Scripts',
+  scriptparsetree:'Scripts', rawfile:'Rawfiles', lightdescription:'Light descriptions',
+  newlensflaredef:'Lens flares', rumble:'Rumbles', ttf:'Fonts', sound:'Sounds', keyvaluepairs:'Key-values',
+  weapon:'Weapons', texturecombo:'Texture combos', scriptbundle:'Script bundles', bg_cache:'BG cache',
+  attachment_cosmetic_variant:'Attachment variants'};
+const TICON={image:'🖼', material:'🎨', xmodelmesh:'🔺', xmodel:'📦', techset:'🌈', xanim:'🎞', xanimparts:'🎞',
+  fx:'✨', script:'📜', scriptparsetree:'📜', rawfile:'📄', lightdescription:'💡', newlensflaredef:'🔆',
+  rumble:'📳', ttf:'🅰', sound:'🔊', keyvaluepairs:'🔑', weapon:'🔫', texturecombo:'🧩', scriptbundle:'🧷',
+  bg_cache:'🗃', attachment_cosmetic_variant:'🎯'};
+const tlabel=t=>TLABEL[t]||TLABEL[SCAN2CEN[t]]||t;
+const ticon =t=>TICON[t]||TICON[SCAN2CEN[t]]||'•';
+// strip the trailing content-hash BO3 appends to asset names (keeps _lodN / _col intact) so names read cleanly
+function cleanName(n){ n=n||'';
+  n=n.replace(/(_lod\d)[0-9a-f]{6,9}$/i,'$1')          // _lod3<hash> -> _lod3 (LODs are single-digit in T7)
+     .replace(/(_(?:col|coll|hitbox\d*|physics))[0-9a-f]{6,9}$/i,'$1')
+     .replace(/(?:[a-z_])[0-9a-f]{7,9}$/i, m=>m[0]);   // strip a trailing 7-9 char content hash (hex or all-digit)
+  return n||(n||'');
+}
+function meshBase(n){ return cleanName(n).replace(/_(lod\d+|col|coll|hitbox\d*|physics)$/i,''); }
+function lodLabel(n){ const c=cleanName(n), b=meshBase(n); const s=c.slice(b.length).replace(/^_/,''); return s||c; }
+
+const EXPORTABLE=new Set(['image','ttf','xmodelmesh','xmodel','fx','rawfile','script']);
+function _assetRow(a){   // one asset row: name + MOD badge + (multi-ff) source-ff badge + export
+  const mod=a.origin==='custom'?'<span class="ob">MOD</span>':'';
+  const ffb=(FFS.length>1)?`<span class="ffb" title="${esc(a.ffLabel||'')}">${esc(a.ffLabel||'')}</span>`:'';
+  const clickable=VIEWABLE.has(a.type);
+  const exp=EXPORTABLE.has(a.type)?`<span class="expx" title="export ${a.type==='image'?'PNG':a.type==='ttf'?'TTF':a.type==='fx'?'.efx':(a.type==='xmodel'||a.type==='xmodelmesh')?'OBJ':'file'}">⬇</span>`:'';
+  return `<div class="arow${clickable?'':' nolink'}" data-t="${a.type}" data-o="${a.offset}" data-ff="${esc(a.ff||'')}" title="${esc(a.name||'')}"><span class="an">${esc(cleanName(a.name)||a.name||'(unnamed)')}</span>${mod}${ffb}${exp}</div>`;
+}
+function _scriptRow(a){
+  return `<div class="file" data-n="${esc(a.name)}" data-ff="${esc(a.ff||'')}" title="${esc(a.name)}">${esc(a.name.split('/').pop())}${a.origin==='custom'?'<span class="ob">MOD</span>':''}</div>`;
+}
+function _dl(el,r){ const u='/api/export?ff='+encodeURIComponent(r.dataset.ff)+'&off='+r.dataset.o+'&type='+r.dataset.t;
+  const a=document.createElement('a'); a.href=u; a.download=''; document.body.appendChild(a); a.click(); a.remove(); }
+function wireRows(){
+  $('#assetlist').querySelectorAll('.file[data-n]').forEach(el=>el.onclick=()=>openScript(el.dataset.n));
+  $('#assetlist').querySelectorAll('.arow[data-o]').forEach(el=>el.onclick=e=>{
+    if(e.target.classList.contains('expx')){ e.stopPropagation(); return _dl(el,el); }
+    if(el.classList.contains('nolink')) return;
+    openAsset(el.dataset.t,+el.dataset.o,(el.querySelector('.an')?.textContent||'').trim(),el.dataset.ff);
+  });
+  renderTree();
+}
+function renderTypeList(type){
+  const q=($('#assetfilter').value||'').toLowerCase();
+  const all=ASSETS.filter(a=>a.type===type);
+  const list=all.filter(a=>!q||(a.name||'').toLowerCase().includes(q)||cleanName(a.name).toLowerCase().includes(q));
+  $('#sidetitle').textContent=tlabel(type);
+  // Meshes: collapse a model's LODs (col/lod0..lodN) into one expandable group so the list isn't 9 rows per model
+  if(type==='xmodelmesh'){
+    const groups={};
+    list.forEach(a=>{ const b=meshBase(a.name)||a.name; (groups[b]=groups[b]||[]).push(a); });
+    const keys=Object.keys(groups).sort();
+    $('#sidecount').textContent=`${keys.length} models · ${list.length} LODs`;
+    const soloOpen=keys.length<=6;
+    let html=keys.map(b=>{
+      const items=groups[b].sort((x,y)=>cleanName(x.name).localeCompare(cleanName(y.name)));
+      const gk='mg:'+b, open=EXPANDED.has(gk)||soloOpen;
+      const anyMod=items.some(a=>a.origin==='custom');
+      let g=`<div class="mgrp" data-mg="${esc(gk)}"><span class="arw">${open?'▾':'▸'}</span><span class="mgn" title="${esc(b)}">${esc(b)}</span>${anyMod?'<span class="ob">MOD</span>':''}<span class="mgc">${items.length}</span></div>`;
+      if(open) g+=`<div class="mgbody">`+items.map(a=>
+        `<div class="arow" data-t="xmodelmesh" data-o="${a.offset}" data-ff="${esc(a.ff||'')}" title="${esc(a.name)}"><span class="an">${esc(lodLabel(a.name))}</span><span class="expx" title="export OBJ">⬇</span></div>`).join('')+`</div>`;
+      return g;
+    }).join('')||'<div class="ahdr">no meshes match</div>';
+    $('#assetlist').innerHTML=html;
+    $('#assetlist').querySelectorAll('.mgrp[data-mg]').forEach(el=>el.onclick=()=>{const k=el.dataset.mg; EXPANDED.has(k)?EXPANDED.delete(k):EXPANDED.add(k); renderTypeList(type);});
+    wireRows(); return;
+  }
+  $('#sidecount').textContent=list.length===all.length?String(all.length):(list.length+'/'+all.length);
+  let html='';
+  if(type==='script'){ html=list.map(_scriptRow).join('')||'<div class="ahdr">none</div>'; }
+  else {
+    const cust=list.filter(a=>a.origin==='custom'), base=list.filter(a=>a.origin!=='custom');
+    if(cust.length) html+=`<div class="grphdr">◆ mod-added<span>${cust.length}</span></div>`+cust.map(_assetRow).join('');
+    if(base.length) html+=`<div class="grphdr">⛓ from base game<span>${base.length}</span></div>`+base.map(_assetRow).join('');
+    if(!list.length) html='<div class="ahdr">no '+esc(tlabel(type).toLowerCase())+' match</div>';
+  }
+  $('#assetlist').innerHTML=html; wireRows();
+}
+function renderOverview(){
+  const inv=window.__inv||{}, rel=inv.related||{}, census=inv.type_census||{};
+  const totalAssets=FFS.reduce((n,f)=>n+(f.inv.total_assets||f.inv.count||0),0);
+  const custom=FFS.reduce((n,f)=>n+(f.inv.custom||0),0), base=FFS.reduce((n,f)=>n+(f.inv.base||0),0);
+  $('#sidecount').textContent=totalAssets.toLocaleString()+' assets';
+  let h=`<div class="ovsum"><b>${totalAssets.toLocaleString()}</b> assets`+(FF&&FF.is_base?' · base game':
+    ` · <span class="badge-custom">◆ ${custom.toLocaleString()}</span> added · <span class="badge-base">⛓ ${base.toLocaleString()}</span> base`)+`</div>`;
+  h+=`<div class="ovsec">fastfiles${FFS.length>1?` · one mod · ${FFS.length} ffs`:''}</div>`;
+  FFS.forEach(f=>{ h+=`<div class="ovff"><span class="ri">📦</span><span class="ovtx"><div class="rfn">${esc(f.name)}</div><div class="rfd">${((f.size||0)/1048576).toFixed(1)} MB · ${(f.inv.total_assets||f.inv.count||0).toLocaleString()} assets</div></span></div>`; });
+  const xp=rel.xpaks||[], loc=rel.localizations||[];
+  if(xp.length||loc.length){ h+=`<div class="ovsec">related files</div>`;
+    xp.forEach(x=>h+=`<div class="ovff"><span class="ri">🗄</span><span class="ovtx"><div class="rfn">${esc(x)}</div><div class="rfd">streamed textures &amp; audio (xpak)</div></span></div>`);
+    if(loc.length) h+=`<div class="ovff"><span class="ri">🌐</span><span class="ovtx"><div class="rfn">${loc.length} localization file${loc.length>1?'s':''}</div><div class="rfd">${loc.map(l=>l.lang).join(', ')}</div></span></div>`; }
+  h+=`<div class="ovsec">asset types</div><div class="ovtypes">`;
+  const scanCen=new Set(ASSETS.map(a=>SCAN2CEN[a.type]||a.type));
+  const CEN2SCAN={xanimparts:'xanim',scriptparsetree:'script',keyvaluepairs:'kvp'};
+  Object.keys(census).sort((a,b)=>census[b]-census[a]).forEach(t=>{
+    const sup=scanCen.has(t), st=CEN2SCAN[t]||t;
+    h+=`<div class="ovtype${sup?'':' u'}"${sup?` data-goto="${st}"`:''}><span>${ticon(t)} ${esc(tlabel(t))}</span><span class="cnt">${census[t].toLocaleString()}${sup?'':' <i>·no viewer</i>'}</span></div>`; });
+  h+=`</div><div class="ovsec">deliver</div><div id="ovtoggle"></div>`;
+  $('#assetlist').innerHTML=h;
+  $('#assetlist').querySelectorAll('.ovtype[data-goto]').forEach(el=>el.onclick=()=>selectView(el.dataset.goto));
+  renderFFToggle();
+}
+// ---- Toggle Studio FF (swap built patch in / restore original) ----
+let FF_STATE=null;
+async function refreshFFState(){ try{ FF_STATE=await api('/api/ffstate',{ff:FF.ff}); }catch(e){ FF_STATE=null; } if(ACTIVE_VIEW==='overview') renderFFToggle(); }
+function renderFFToggle(){
+  const el=$('#ovtoggle'); if(!el) return;
+  if(!FF_STATE||FF_STATE.error){ el.innerHTML='<div class="tgd">unavailable</div>'; return; }
+  const st=FF_STATE.state, canAct=(st==='studio')||FF_STATE.hasBuild;
+  el.innerHTML=`<div class="tgcard">
+    <div class="tgrow"><span class="tgdot ${st}"></span><b>${st==='studio'?'Studio ff installed':'Original ff active'}</b></div>
+    <div class="tgd">${st==='studio'?'Built ff is installed. Original saved as .pristine_backup.':(FF_STATE.hasBuild?'Built .studio.ff ready to install.':'Build first to enable this.')}</div>
+    <button id="tgbtn" ${canAct?'':'disabled'}>${st==='studio'?'↩ Restore original':'⇄ Install Studio ff'}</button>
+    <div class="tgnote">⚠ Steam may restore workshop files. For lasting changes, use a local mod folder.</div>
+  </div>`;
+  const b=$('#tgbtn'); if(b&&!b.disabled) b.onclick=async()=>{ b.disabled=true; b.textContent='working…';
+    const r=await api('/api/toggleff',{ff:FF.ff}); if(r.error) log('ERR: '+r.error,'err'); else log(r.msg,'ok'); await refreshFFState(); };
+}
+$('#assetfilter').addEventListener('input',()=>{ if(ACTIVE_VIEW!=='overview'&&ACTIVE_VIEW!=='symbols') renderSide(); });
+let AFF=null;   // the fastfile of the asset currently open (multi-ff routing; defaults to the primary)
+function affURL(){ return encodeURIComponent(AFF||(FF&&FF.ff)||''); }
+async function openAsset(type,off,name,ff){
+  AFF=ff||(FF&&FF.ff);
+  if(type==='script'){hideViewer();return openScript(name);}
+  if(!VIEWABLE.has(type)||type==='kvp'){ return openStruct(off,name,type); }
+  showLoading('Loading '+name+' …');
+  try{
+    if(type==='image'){
+      const resp=await fetch('/api/image?ff='+affURL()+'&off='+off);
+      if((resp.headers.get('Content-Type')||'').startsWith('image')){
+        const url=URL.createObjectURL(await resp.blob());
+        showViewer(`🖼 <b>${name}</b> <a class="vexport" href="/api/export?ff=${affURL()}&off=${off}&type=image" download>⬇ PNG</a>`,`<img src="${url}">`+imageReplacePanel(off,name));
+        wireImageReplace(off,name);
+      }else{ const j=await resp.json().catch(()=>({error:'decode failed'})); showViewer(`🖼 <b>${name}</b>`,`<pre>${esc(j.error||'decode failed')}</pre>`); }
+    }else if(type==='fx'){
+      const r=await api('/api/fxview',{ff:AFF,off});
+      const curves=fxCurvesHtml(r.curves);
+      showViewer(`✨ <b>${name}</b> — fx → .efx (${r.elemCount} elements)`,
+        `${curves}<span class="fxtoggle" id="fxsrc">▸ show decompiled .efx source</span>
+         <pre id="fxsrcpre" hidden>${esc(r.efx||JSON.stringify(r,null,1))}</pre>`);
+      const tg=document.getElementById('fxsrc'); if(tg) tg.onclick=()=>{const p=document.getElementById('fxsrcpre');
+        p.hidden=!p.hidden; tg.textContent=(p.hidden?'▸ show':'▾ hide')+' decompiled .efx source';};
+    }else if(type==='rawfile'){
+      const r=await api('/api/luaview',{ff:AFF,off});
+      if(r.string_count!=null){
+        showViewer(`📜 <b>${name}</b> — HKS Lua disassembly`, luaViewHtml(r)+luaBuildPanel(r,off,name));
+        document.querySelectorAll('#viewer .luasec .h').forEach(h=>h.onclick=()=>{
+          const b=document.getElementById(h.dataset.tg); b.hidden=!b.hidden;
+          h.textContent=(b.hidden?'▸':'▾')+' '+h.textContent.slice(2);});
+        wireLuaBuild(off,name);
+      }else if(r.kind==='text'||r.kind==='hex'){
+        const label=r.kind==='hex'?'binary rawfile (hex)':(r.ext?r.ext.toUpperCase()+' rawfile':'text rawfile');
+        showViewer(`📄 <b>${name}</b> — ${label} · ${r.length} bytes`,
+          `<pre class="luasrc" style="max-height:70vh">${esc(r.text)}</pre>`);
+      }else showViewer(`📜 <b>${name}</b>`,`<pre>${esc(JSON.stringify(r,null,1))}</pre>`);
+    }else if(type==='ttf'){
+      await openFont(off,name);
+    }else if(type==='material'){
+      await openMaterial(off,name);
+    }else if(type==='techset'){
+      await openTechset(off,name);
+    }else if(type==='xmodelmesh'){
+      await openModel(off,name);
+    }else if(type==='xanim'){
+      await openAnim(off,name);
+    }else if(type==='xmodel'){
+      await openXmodel(off,name);
+    }else if(type==='stringtable'){
+      await openStringtable(off,name);
+    }else{ showViewer(`<b>${name}</b>`,`<pre>type ${type} — no viewer</pre>`); }
+  }catch(e){showViewer(`<b>${name}</b>`,`<pre>error: ${e}</pre>`);}finally{hideLoading();}
+}
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+// ---- stringtable: T7 .csv data table (weapon stats, zombie config, …) ----
+async function openStringtable(off,name){
+  const r=await api('/api/stringtableview',{ff:AFF,off});
+  if(r&&r.error) return showViewer(`📊 <b>${esc(name)}</b>`,`<div class="matnote">${esc(r.error)}</div>`);
+  const cap=Math.min(r.rows,500);
+  const th=`<tr>${Array.from({length:r.cols},(_,c)=>`<th>${c}</th>`).join('')}</tr>`;
+  const rowsHtml=r.grid.slice(0,cap).map(row=>`<tr>${row.map(v=>{
+    v=String(v);
+    if(/^«[0-9a-f]{8}»$/.test(v)) return `<td class="stref" title="not found (hash ${esc(v)})">·</td>`;
+    if(v[0]==='⚙') return `<td class="stamb" title="another string has the same hash, so this value may be wrong">${esc(v.slice(1))}</td>`;
+    return `<td>${esc(v)}</td>`;}).join('')}</tr>`).join('');
+  const note=(r.ambiguousCount||r.unresolvedCount)?`<div class="matnote" style="margin-top:6px">${r.ambiguousCount?`${r.ambiguousCount.toLocaleString()} underlined values may be wrong (duplicate hash). `:''}${r.unresolvedCount?`${r.unresolvedCount.toLocaleString()} shown as · could not be found.`:''}</div>`:'';
+  showViewer(`📊 <b>${esc(name)}</b> — stringtable`,
+    `<div class="modelmeta"><b>${r.rows.toLocaleString()}</b> rows · <b>${r.cols}</b> cols${r.rows>cap?` · showing first ${cap}`:''}</div>${note}
+     <div style="overflow:auto;max-height:70vh;border:1px solid var(--border,#333);border-radius:6px"><table class="sttbl">${th}${rowsHtml}</table></div>`);
+}
+// ---- generic inspector: kvp and any asset type without a dedicated viewer ----
+async function openStruct(off,name,type){
+  showLoading('Loading '+name+' …');
+  try{
+    const r=await api('/api/structview',{ff:AFF,off});
+    if(r.error) return showViewer(`${ticon(type)} <b>${esc(name)}</b>`,`<pre>${esc(r.error)}</pre>`);
+    const strs=(r.strings||[]).map(s=>`<div class="strow"><span class="so">+${s.off.toString(16)}</span> ${esc(s.text)}</div>`).join('')||'<i class="dimtxt">none</i>';
+    const ptrs=(r.pointers||[]).map(p=>`<span class="ptr">+0x${p.off.toString(16)} · ${p.kind}</span>`).join('')||'<i class="dimtxt">none</i>';
+    showViewer(`${ticon(type)} <b>${esc(name||'(unnamed)')}</b> — ${esc(tlabel(type))} <span class="stnote">raw view (no viewer for this type yet)</span>`,
+      `<div class="structv">
+        <div class="stsec">Readable strings in this asset (${(r.strings||[]).length})</div><div class="strlist">${strs}</div>
+        <div class="stsec">Header pointers</div><div class="ptrs">${ptrs}</div>
+        <div class="stsec">Hex — first ${r.regionLen} bytes @ 0x${(off).toString(16)}</div>
+        <pre class="luasrc" style="max-height:46vh">${esc(r.hex)}</pre></div>`);
+  }catch(e){ showViewer(`<b>${esc(name)}</b>`,`<pre>error: ${e}</pre>`); }
+  finally{ hideLoading(); }
+}
+// ---- TrueType font preview (renders real glyphs in-browser via FontFace) ----
+let _fontSeq=0;
+async function openFont(off,name){
+  const resp=await fetch('/api/font?ff='+affURL()+'&off='+off);
+  if(!(resp.headers.get('Content-Type')||'').includes('font')){
+    const j=await resp.json().catch(()=>({error:'font decode failed'}));
+    return showViewer(`🅰 <b>${esc(name)}</b>`,`<pre>${esc(j.error||'decode failed')}</pre>`);
+  }
+  const fam=decodeURIComponent(resp.headers.get('X-Font-Family')||'')||name;
+  const glyphs=resp.headers.get('X-Font-Glyphs')||'?';
+  const tables=decodeURIComponent(resp.headers.get('X-Font-Tables')||'');
+  const buf=await resp.arrayBuffer();
+  const face='fffont'+(++_fontSeq);
+  try{ const ff2=new FontFace(face, buf); await ff2.load(); document.fonts.add(ff2); }
+  catch(e){ return showViewer(`🅰 <b>${esc(name)}</b>`,`<pre>font failed to load in-browser: ${esc(''+e)}</pre>`); }
+  const kb=(buf.byteLength/1024).toFixed(0);
+  const rows=[[30,'The quick brown fox jumps over the lazy dog'],
+    [22,'ABCDEFGHIJKLMNOPQRSTUVWXYZ'],[22,'abcdefghijklmnopqrstuvwxyz'],
+    [20,'0123456789  &@#%$?!.,:;()[]{}/'+String.fromCharCode(92)]];
+  const ramp=[46,34,26,20,16,13].map(px=>`<div style="font-family:'${face}';font-size:${px}px">${px}px  The quick brown fox jumps over the lazy dog</div>`).join('');
+  const body=`<div class="fontmeta"><b>${esc(fam)}</b> · ${glyphs} glyphs · ${kb} KB · ${tables?tables.split(',').length:'?'} sfnt tables</div>
+   <div class="fontprev" style="font-family:'${face}',sans-serif">${rows.map(([px,t])=>`<div style="font-size:${px}px">${esc(t)}</div>`).join('')}</div>
+   <div class="fontramp">${ramp}</div>
+   <div class="ftag">tables: ${esc(tables)}</div>`;
+  showViewer(`🅰 <b>${esc(name)}</b> — TrueType font`, body);
+}
+// ---- material preview (name + counts + inline texture set with real thumbnails) ----
+async function openMaterial(off,name){
+  const r=await api('/api/matview',{ff:AFF,off});
+  if(r&&r.error) return showViewer(`🎨 <b>${esc(name)}</b>`,`<pre>${esc(r.error)}</pre>`);
+  const tex=r.inline||[];
+  const cards=tex.map(t=>`
+    <div class="texcard">
+      <div class="texthumb"><img data-off="${t.offset}" alt="${esc(t.name)}"></div>
+      <div class="texinfo"><div class="texn" title="${esc(t.name)}">${esc(t.name.split('/').pop())}</div>
+        <div class="texmeta">${t.role?`<span class="texrole">${esc(t.role)}</span> · `:''}${t.width}×${t.height} ${esc(t.format)}</div></div>
+    </div>`).join('');
+  const meta=`${r.textures} texture${r.textures===1?'':'s'}`
+    +(r.referenced>0?` · ${r.referenced} shared/base (resolved at load)`:'')
+    +` · ${r.samplers} samplers · ${r.constants} const-buffers`;
+  const shader=r.techset?`<div class="matshader">shader/technique: <code>${esc(r.techset)}</code></div>`:'';
+  const body=`<div class="matmeta">${meta}</div>${shader}
+    ${tex.length?`<div class="texgrid">${cards}</div>`:`<div class="matnote">No textures stored in this ff. This material uses base-game textures.</div>`}`;
+  showViewer(`🎨 <b>${esc(name)}</b> — material`, body);
+  // lazy-load each thumbnail from the image endpoint
+  document.querySelectorAll('#viewer .texthumb img[data-off]').forEach(img=>{
+    fetch('/api/image?ff='+affURL()+'&off='+img.dataset.off).then(resp=>{
+      if((resp.headers.get('Content-Type')||'').startsWith('image')) return resp.blob().then(b=>{img.src=URL.createObjectURL(b);});
+      img.parentElement.classList.add('texfail'); img.parentElement.textContent='streamed';
+    }).catch(()=>{img.parentElement.classList.add('texfail');img.parentElement.textContent='—';});
+  });
+}
+// ---- techset preview (DXBC shader set: type breakdown + vertex layout + bound resources + per-shader stats) ----
+async function openTechset(off,name){
+  const r=await api('/api/tsview',{ff:AFF,off});
+  if(r&&r.error) return showViewer(`🌈 <b>${esc(name)}</b>`,`<pre>${esc(r.error)}</pre>`);
+  if(!r.shader_count) return showViewer(`🌈 <b>${esc(name)}</b> — techset`,
+    `<div class="matnote">No shaders stored in this entry. It references a technique set defined elsewhere.</div>`);
+  const bt=r.by_type||{};
+  const parts=['vertex','pixel','geometry','hull','domain','compute'].filter(t=>bt[t]).map(t=>`${bt[t]} ${t}`);
+  const vin=(r.vertex_inputs||[]).map(i=>`<span class="sig"><b>${esc(i.semantic)}</b><span class="sigc">.${i.comps}</span></span>`).join('');
+  const KIND={texture:'🖼',sampler:'🎚',cbuffer:'📦',tbuffer:'📦',uav:'⚙'};
+  const pres=(r.pixel_resources||[]).map(rr=>`<span class="res res-${rr.kind}">${KIND[rr.kind]||'•'} ${esc(rr.name)}</span>`).join('');
+  const shl=(r.shaders||[]).map(s=>`<tr><td class="st-${s.type}">${s.type}</td><td>${s.instrs??'—'}</td><td>${s.resources}</td><td>${(s.size/1024).toFixed(1)} KB</td></tr>`).join('');
+  const body=`<div class="matmeta">Shader Model ${esc(r.sm)} · ${r.shader_count} shaders (${parts.join(' + ')})</div>
+    ${vin?`<div class="tssec"><div class="tsh">Vertex input layout</div><div class="siglist">${vin}</div></div>`:''}
+    ${pres?`<div class="tssec"><div class="tsh">Pixel shader resources</div><div class="reslist">${pres}</div></div>`:''}
+    <div class="tssec"><div class="tsh tstoggle" id="shtog">▸ all ${r.shader_count} shaders</div>
+      <table class="shtbl" id="shtbl" hidden><thead><tr><th>type</th><th>instrs</th><th>resources</th><th>size</th></tr></thead><tbody>${shl}</tbody></table></div>`;
+  showViewer(`🌈 <b>${esc(name)}</b> — techset (${r.shader_count} shaders)`, body);
+  const tg=document.getElementById('shtog'); if(tg) tg.onclick=()=>{const t=document.getElementById('shtbl');
+    t.hidden=!t.hidden; tg.textContent=(t.hidden?'▸ all ':'▾ all ')+r.shader_count+' shaders';};
+}
+// ---- 3D model viewer (T7 XSurface geometry -> three.js) ----
+let _threeP=null, _modelRAF=null, _animRAF=null;
+function loadThree(){ if(_threeP) return _threeP;
+  _threeP=new Promise((res,rej)=>{ if(window.THREE) return res();
+    // Monaco's AMD loader defines window.define; three's UMD would register with AMD instead of setting the
+    // global. Hide define across the load so the UMD falls through to window.THREE, then restore it.
+    const savedDefine=window.define; try{window.define=undefined;}catch(e){}
+    const restore=()=>{try{window.define=savedDefine;}catch(e){}};
+    const s=document.createElement('script'); s.src='/three.min.js';   // bundled UMD build, served same-origin
+    s.onload=()=>{restore(); window.THREE?res():rej(new Error('no global'));};
+    s.onerror=()=>{restore(); rej(new Error('load'));};
+    document.head.appendChild(s); });
+  return _threeP;
+}
+const _modelBase=n=>n.replace(/_lod\d+.*$/i,'').replace(/[0-9a-f]{6,}$/,'');   // strip LOD + hash suffix
+async function openModel(off,name){
+  if(_modelRAF){cancelAnimationFrame(_modelRAF);_modelRAF=null;}
+  if(_animRAF){cancelAnimationFrame(_animRAF);_animRAF=null;}
+  let r=await api('/api/meshview',{ff:AFF,off}), usedLod=null;
+  if(r&&r.error){   // this LOD has no inline geometry — auto-load a drawable LOD of the same model
+    showViewer(`📦 <b>${esc(name)}</b> — model`,`<div class="matnote">Loading model…</div>`);
+    const base=_modelBase(name);
+    const sibs=(window.__inv&&window.__inv.assets||[]).filter(a=>a.type==='xmodelmesh'&&a.offset!==off&&_modelBase(a.name)===base);
+    for(const s of sibs){ const r2=await api('/api/meshview',{ff:AFF,off:s.offset}); if(!r2.error){ r=r2; usedLod=s.name; break; } }
+  }
+  if(r&&r.error) return showViewer(`📦 <b>${esc(name)}</b> — model`,
+    `<div class="matnote">No drawable geometry for this model in this fastfile.<br><span style="opacity:.7">${esc(r.error)}</span></div>`);
+  if(usedLod) name=usedLod;
+  showViewer(`📦 <b>${esc(name)}</b> — 3D model`,
+    `<div class="modelmeta"><b>${r.vertexCount.toLocaleString()}</b> vertices · <b>${r.triCount.toLocaleString()}</b> triangles · bounds ${r.bounds.map(b=>b.toFixed(1)).join(' × ')}
+       <span class="mhint">drag to rotate · scroll to zoom · <label><input type="checkbox" id="mwire"> wireframe</label></span></div>
+     <div id="modelwrap"><canvas id="modelcanvas"></canvas></div>`);
+  try{ await loadThree(); }catch(e){
+    return showViewer(`📦 <b>${esc(name)}</b>`,`<pre>three.js failed to load from CDN (offline?). ${r.vertexCount} verts, ${r.triCount} tris decoded OK.</pre>`); }
+  buildModelScene(r);
+}
+function buildModelScene(r){
+  const cv=document.getElementById('modelcanvas'); if(!cv)return;
+  const W=cv.clientWidth||cv.parentElement.clientWidth||800, H=cv.clientHeight||480;
+  const rn=new THREE.WebGLRenderer({canvas:cv,antialias:true}); rn.setPixelRatio(devicePixelRatio||1); rn.setSize(W,H,false);
+  rn.setClearColor(0x15151a);
+  const sc=new THREE.Scene();
+  const cam=new THREE.PerspectiveCamera(40,W/H,0.01,100);
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(r.positions),3));
+  g.setIndex(new THREE.BufferAttribute(new Uint32Array(r.indices),1));
+  g.computeVertexNormals();
+  const mat=new THREE.MeshPhongMaterial({color:0x9aa2ab,specular:0x222428,shininess:12,flatShading:false,side:THREE.DoubleSide});
+  const mesh=new THREE.Mesh(g,mat); sc.add(mesh);
+  const wire=new THREE.LineSegments(new THREE.WireframeGeometry(g),new THREE.LineBasicMaterial({color:0x1177bb,transparent:true,opacity:0.18}));
+  wire.visible=false; sc.add(wire);
+  sc.add(new THREE.AmbientLight(0xffffff,0.5));
+  const dl=new THREE.DirectionalLight(0xffffff,0.85); dl.position.set(2,3,2.5); sc.add(dl);
+  const dl2=new THREE.DirectionalLight(0x6688cc,0.35); dl2.position.set(-2,-1,-2); sc.add(dl2);
+  const grid=new THREE.GridHelper(2,20,0x333842,0x24272e); grid.position.y=-0.5; sc.add(grid);
+  // camera orbit state
+  let rx=0.5, ry=0.7, dist=2.4, dragging=false, px=0, py=0, auto=true;
+  function place(){ cam.position.set(dist*Math.cos(rx)*Math.sin(ry), dist*Math.sin(rx), dist*Math.cos(rx)*Math.cos(ry)); cam.lookAt(0,0,0); }
+  cv.onpointerdown=e=>{dragging=true;auto=false;px=e.clientX;py=e.clientY;cv.setPointerCapture(e.pointerId);};
+  cv.onpointerup=e=>{dragging=false;};
+  cv.onpointermove=e=>{ if(!dragging)return; ry-=(e.clientX-px)*0.01; rx+=(e.clientY-py)*0.01;
+    rx=Math.max(-1.5,Math.min(1.5,rx)); px=e.clientX; py=e.clientY; };
+  cv.onwheel=e=>{e.preventDefault(); dist=Math.max(0.8,Math.min(8,dist*(1+Math.sign(e.deltaY)*0.1)));};
+  document.getElementById('mwire').onchange=e=>{wire.visible=e.target.checked;};
+  function loop(){ if(!document.getElementById('modelcanvas')){_modelRAF=null;return;}
+    if(auto) ry+=0.004; place(); rn.render(sc,cam); _modelRAF=requestAnimationFrame(loop); }
+  loop();
+}
+// ---- assembled xmodel viewer (linked LOD mesh in 3D + skeleton + LODs) ----
+async function openXmodel(off,name){
+  if(_modelRAF){cancelAnimationFrame(_modelRAF);_modelRAF=null;}
+  if(_animRAF){cancelAnimationFrame(_animRAF);_animRAF=null;}
+  const r=await api('/api/xmodelview',{ff:AFF,off});
+  if(r&&r.error) return showViewer(`📦 <b>${esc(name)}</b> — model`,`<div class="matnote">${esc(r.error)}</div>`);
+  const bones=(r.bones||[]);
+  const bonehtml=bones.length?`<div class="tssec"><div class="tsh tstoggle" id="xbtog">▸ Skeleton — ${r.boneCount} bones</div>
+     <div class="bonelist" id="xbonelist" hidden>${bones.map((b,i)=>`<div class="brow"><span class="bi">${i}</span>${esc(b)}</div>`).join('')}</div></div>`:'';
+  const meta=`<div class="animmeta"><span class="am"><b>${r.boneCount}</b> bones</span><span class="am"><b>${r.lods}</b> LODs</span>
+     <span class="am"><b>${r.linkedMeshes}</b> linked meshes</span>${r.meshName?`<span class="am">geometry: ${esc(r.meshName.split('_lod')[0])}</span>`:''}</div>`;
+  if(r.meshOffset==null){
+    const note = r.hint
+      ? `<div class="matnote" style="margin-top:10px">🔗 ${esc(r.hint)}</div>`
+      : `<div class="matnote" style="margin-top:10px">No geometry in this fastfile (collision or placeholder model).</div>`;
+    return showViewer(`📦 <b>${esc(name)}</b> — model`, meta+bonehtml+note);
+  }
+  const mv=await api('/api/meshview',{ff:r.meshFF||AFF,off:r.meshOffset});
+  if(mv&&mv.error) return showViewer(`📦 <b>${esc(name)}</b> — model`,meta+bonehtml+`<div class="matnote">${esc(mv.error)}</div>`);
+  const xffnote = r.resolvedFrom ? `<div class="matnote" style="margin-top:6px">🔗 geometry loaded from <b>${esc(r.resolvedFrom)}</b> (shared base fastfile)</div>` : '';
+  showViewer(`📦 <b>${esc(name)}</b> — model`,
+    `${meta}${xffnote}<div class="modelmeta"><b>${mv.vertexCount.toLocaleString()}</b> verts · <b>${mv.triCount.toLocaleString()}</b> tris · <span class="mhint">drag to rotate · scroll to zoom · <label><input type="checkbox" id="mwire"> wireframe</label></span></div>
+     <div id="modelwrap"><canvas id="modelcanvas"></canvas></div>${bonehtml}`);
+  try{ await loadThree(); }catch(e){ return; }
+  buildModelScene(mv);
+  const tg=document.getElementById('xbtog'); if(tg) tg.onclick=()=>{const l=document.getElementById('xbonelist');
+    l.hidden=!l.hidden; tg.textContent=(l.hidden?'▸':'▾')+tg.textContent.slice(1);};
+}
+// ---- animation viewer (decoded keyframe playback + metadata + skeleton) ----
+async function openAnim(off,name){
+  if(_modelRAF){cancelAnimationFrame(_modelRAF);_modelRAF=null;}
+  if(_animRAF){cancelAnimationFrame(_animRAF);_animRAF=null;}
+  const r=await api('/api/animview',{ff:AFF,off});
+  if(r&&r.error) return showViewer(`🎞 <b>${esc(name)}</b> — animation`,`<div class="matnote">${esc(r.error)}</div>`);
+  const bones=(r.bones||[]);
+  const bonehtml=bones.length?bones.map((b,i)=>`<div class="brow"><span class="bi">${i}</span>${esc(b)}</div>`).join(''):'<div class="matnote">Bone names unavailable for this ff.</div>';
+  // decode status badges
+  const badge=(ok,t)=>`<span class="ambadge ${ok?'ok':'no'}">${ok?'✓':'○'} ${t}</span>`;
+  const val = r.decoded
+    ? badge(r.exact&&r.unitQuaternions, r.exact&&r.unitQuaternions?'decoded':'partly decoded')+(r.hasDelta?`<span class="ambadge">root motion not shown</span>`:'')
+    : `<span class="ambadge no">couldn't decode: ${esc(r.error||'')}</span>`;
+  const partsHtml = r.partCounts ? Object.entries(r.partCounts).map(([k,v])=>`<span class="am">${k}: <b>${v}</b></span>`).join('') : '';
+  const canPlay = r.decoded && r.tracks && r.tracks.length;
+  const player = canPlay ? `
+    <div class="modelmeta"><b>${r.animatedBones}</b> animated bones · <b>${r.rotatedBones}</b> rotated · <b>${r.translatedBones}</b> translated
+      <span class="mhint">drag to rotate · scroll to zoom</span></div>
+    <div id="animwrap"><canvas id="animcanvas"></canvas>
+      <div class="animhud"><span id="animframe">frame 0</span></div></div>
+    <div class="animctl">
+      <button id="animplay" class="animbtn">⏸</button>
+      <input type="range" id="animscrub" min="0" max="${Math.max(1,r.frames)}" step="0.01" value="0" class="animrange">
+      <select id="animspeed" class="animsel"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+      <select id="animmodel" class="animsel"><option value="">bones only</option>${(r.models||[]).map(m=>`<option value="${m.offset}" data-ff=""${m.offset===r.defaultModel?' selected':''}>on: ${esc(m.name)} (${m.boneCount}b · ${Math.round(m.score*100)}%)</option>`).join('')}</select>
+      <label class="animchk"><input type="checkbox" id="animtrail" checked> trails</label>
+      <span id="animstat" class="mhint"></span>
+    </div>` : `<div class="matnote" style="margin-top:10px">No animated bones (static pose).</div>`;
+  const body=`<div class="animmeta">
+      <span class="am"><b>${r.frames}</b> frames</span><span class="am"><b>${r.fps}</b> fps</span>
+      <span class="am"><b>${r.duration}</b> s</span><span class="am"><b>${r.boneCount}</b> bones</span>
+      <span class="am"><b>${r.notifies}</b> notetracks</span><span class="am">${(r.animBytes/1024).toFixed(1)} KB anim data</span></div>
+    <div class="animval">${val}</div>
+    ${player}
+    <div class="tssec"><div class="tsh tstoggle" id="btog">▸ Skeleton — ${r.boneCount} bones this anim drives</div>
+      <div class="bonelist" id="bonelist" hidden>${bonehtml}</div></div>`;
+  showViewer(`🎞 <b>${esc(name)}</b> — animation`, body);
+  const tg=document.getElementById('btog'); if(tg) tg.onclick=()=>{const l=document.getElementById('bonelist');
+    l.hidden=!l.hidden; tg.textContent=(l.hidden?'▾':'▸')+tg.textContent.slice(1);};
+  if(canPlay){
+    try{ await loadThree(); }catch(e){ return; }
+    const _skelCache={}, _skinCache={};
+    async function loadSkel(mo,ffp){ if(!mo) return null; const k=(ffp||'')+':'+mo; if(_skelCache[k]) return _skelCache[k];
+      try{ const s=await api('/api/skeleton',{ff:ffp||AFF,off:+mo}); if(s&&!s.error){_skelCache[k]=s; return s;} }catch(e){}
+      return null; }
+    async function loadSkin(mo,ffp){ if(!mo) return null; const k=(ffp||'')+':'+mo; if(k in _skinCache) return _skinCache[k];
+      try{ const s=await api('/api/meshskin',{ff:ffp||AFF,off:+mo}); _skinCache[k]=(s&&!s.error)?s:null; return _skinCache[k]; }catch(e){ _skinCache[k]=null; return null; } }
+    const sel=document.getElementById('animmodel');
+    const rebuild=async()=>{ if(!sel) return buildAnimScene(r,null,null);
+      const opt=sel.selectedOptions[0]; const mo=sel.value; const ffp=opt?opt.getAttribute('data-ff'):'';
+      const stat=document.getElementById('animstat'); if(stat&&mo) stat.textContent='loading skeleton…';
+      const skel=mo?await loadSkel(mo,ffp):null;
+      buildAnimScene(r,skel,null);                              // pose the skeleton immediately
+      if(mo&&skel){ const skin=await loadSkin(mo,ffp);          // then upgrade to the skinned mesh (may be slow/absent)
+        if(skin && sel.value===mo) buildAnimScene(r,skel,skin); } };
+    if(sel) sel.onchange=rebuild;
+    await rebuild();
+    // resolve base-game models this mod anim drives (retail fastfiles). One-time index build runs server-side; poll.
+    if(sel && r.tracks && r.tracks.length){
+      const addBase=(matches)=>{ if(!matches||!matches.length) return;
+        if([...sel.options].some(o=>o.getAttribute('data-ff'))) return;   // already added
+        const grp=document.createElement('optgroup'); grp.label='base game';
+        matches.forEach(m=>{ const o=document.createElement('option'); o.value=m.off; o.setAttribute('data-ff',m.ff);
+          o.textContent=`base: ${m.name} (${m.boneCount}b · ${Math.round(m.score*100)}%)`; grp.appendChild(o); });
+        sel.appendChild(grp);
+        if(!r.defaultModel){ sel.value=matches[0].off; rebuild(); } };
+      let tries=0;
+      const poll=async()=>{ tries++;
+        try{ const res=await api('/api/basematch',{ff:AFF,off});
+          if(res.status==='ready'){ addBase(res.matches); return; }
+          if(res.status==='building' && tries<60){ const st=document.getElementById('animstat');
+            if(st && !r.defaultModel) st.textContent='Indexing base-game models (first run only)…'; setTimeout(poll,3000); } }
+        catch(e){} };
+      poll();
+    }
+  }
+}
+// sample a sorted keyframe track [[frame,...vals]] at fractional frame f
+function _sampleKeys(keys,f){
+  if(keys.length===1) return {a:keys[0],b:keys[0],t:0};
+  let lo=0,hi=keys.length-1;
+  if(f<=keys[0][0]) return {a:keys[0],b:keys[0],t:0};
+  if(f>=keys[hi][0]) return {a:keys[hi],b:keys[hi],t:0};
+  while(hi-lo>1){const m=(lo+hi)>>1; if(keys[m][0]<=f) lo=m; else hi=m;}
+  const span=keys[hi][0]-keys[lo][0]||1;
+  return {a:keys[lo],b:keys[hi],t:(f-keys[lo][0])/span};
+}
+let _animRN=null;
+// sample a rotation track into THREE.Quaternion q (slerp)
+function _sampleRot(keys,f,q){ const s=_sampleKeys(keys,f);
+  _qA.set(s.a[1],s.a[2],s.a[3],s.a[4]); _qB.set(s.b[1],s.b[2],s.b[3],s.b[4]); return q.copy(_qA).slerp(_qB,s.t); }
+function _sampleTrn(keys,f,v){ const s=_sampleKeys(keys,f);
+  return v.set(s.a[1]+(s.b[1]-s.a[1])*s.t, s.a[2]+(s.b[2]-s.a[2])*s.t, s.a[3]+(s.b[3]-s.a[3])*s.t); }
+let _qA,_qB;
+function buildAnimScene(r,skel,skin){
+  const cv=document.getElementById('animcanvas'); if(!cv)return;
+  if(_animRAF){cancelAnimationFrame(_animRAF);_animRAF=null;}
+  if(!_qA){_qA=new THREE.Quaternion(); _qB=new THREE.Quaternion();}
+  const W=cv.clientWidth||cv.parentElement.clientWidth||760, H=cv.clientHeight||420;
+  if(_animRN){ try{_animRN.dispose();}catch(e){} }
+  const rn=new THREE.WebGLRenderer({canvas:cv,antialias:true}); _animRN=rn;
+  rn.setPixelRatio(devicePixelRatio||1); rn.setSize(W,H,false); rn.setClearColor(0x15151a);
+  const sc=new THREE.Scene();
+  const cam=new THREE.PerspectiveCamera(42,W/H,0.001,1000);
+  sc.add(new THREE.AmbientLight(0xffffff,0.7));
+  const dl=new THREE.DirectionalLight(0xffffff,0.6); dl.position.set(2,3,2.5); sc.add(dl);
+  sc.add(new THREE.GridHelper(3,24,0x2c313a,0x22262d));
+  const stat=document.getElementById('animstat');
+  const maxF=Math.max(1,r.frames), fps=r.fps||30;
+  let apply;   // apply(frame) -> updates the scene; set per-mode below
+
+  // Match anim tracks to bones by name (works for both modes)
+  const trackByName={}; r.tracks.forEach(t=>{trackByName[t.bone]=t;});
+
+  if(skel && skel.names && skel.parents){
+    // ---- FK skeleton mode: pose the real model skeleton with the decoded curves ----
+    const n=skel.names.length;
+    const bindQ=skel.localRot.map(q=>new THREE.Quaternion(q[0],q[1],q[2],q[3]));
+    const bindT=skel.localTrans.map(t=>new THREE.Vector3(t[0],t[1],t[2]));
+    const map=skel.names.map(nm=>trackByName[nm]||null);          // model bone -> anim track
+    const matched=map.filter(Boolean).length;
+    const wQ=Array.from({length:n},()=>new THREE.Quaternion());
+    const wP=Array.from({length:n},()=>new THREE.Vector3());
+    const tmpQ=new THREE.Quaternion(), tmpV=new THREE.Vector3();
+    // forward-kinematics: fill wQ/wP (world) at fractional frame f
+    const fkAt=(f)=>{ for(let j=0;j<n;j++){ const par=skel.parents[j], tr=map[j];
+      const lq=(tr&&tr.rot)?_sampleRot(tr.rot,f,tmpQ):bindQ[j];
+      const lt=(tr&&tr.trn)?_sampleTrn(tr.trn,f,tmpV):bindT[j];
+      if(par<0){ wQ[j].copy(lq); wP[j].copy(lt); }
+      else { wQ[j].multiplyQuaternions(wQ[par],lq); wP[j].copy(lt).applyQuaternion(wQ[par]).add(wP[par]); } } };
+    // frame the WHOLE animation: sample the posed skeleton across time for stable bounds
+    let mn=[1e9,1e9,1e9],mx=[-1e9,-1e9,-1e9];
+    for(let s=0;s<=8;s++){ fkAt(maxF*s/8);
+      for(let j=0;j<n;j++){ const p=wP[j]; if(p.x<mn[0])mn[0]=p.x; if(p.x>mx[0])mx[0]=p.x;
+        if(p.y<mn[1])mn[1]=p.y; if(p.y>mx[1])mx[1]=p.y; if(p.z<mn[2])mn[2]=p.z; if(p.z>mx[2])mx[2]=p.z; } }
+    const ctr=[(mn[0]+mx[0])/2,(mn[1]+mx[1])/2,(mn[2]+mx[2])/2];
+    let scl=1.7/Math.max(mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2],1e-3);
+    // CoD is Z-up right-handed; three.js is Y-up. Convert: (x,y,z)cod -> (x, z, -y)three
+    const NP=(v,o)=>o.set((v.x-ctr[0])*scl,(v.z-ctr[2])*scl,-(v.y-ctr[1])*scl);
+    const nonRoot=skel.parents.filter(p=>p>=0).length;
+    const hasMesh = !!(skin && skin.positions && skin.indices);
+    const segGeo=new THREE.BufferGeometry(); const segArr=new Float32Array(nonRoot*2*3);
+    segGeo.setAttribute('position',new THREE.BufferAttribute(segArr,3));
+    const segLines=new THREE.LineSegments(segGeo,new THREE.LineBasicMaterial({color:0x59c2ff,transparent:true,opacity:hasMesh?0.32:1}));
+    sc.add(segLines);
+    const jGeo=new THREE.BufferGeometry(); const jArr=new Float32Array(n*3);
+    jGeo.setAttribute('position',new THREE.BufferAttribute(jArr,3));
+    const jPts=new THREE.Points(jGeo,new THREE.PointsMaterial({color:0x9fdcff,size:0.03,sizeAttenuation:true,transparent:true,opacity:hasMesh?0.4:1}));
+    sc.add(jPts);
+    const outV=new THREE.Vector3();
+    // ---- skinned mesh: linear-blend skinning of the real mesh by the posed skeleton ----
+    let skinApply=null;
+    if(hasMesh){
+      const ONE=new THREE.Vector3(1,1,1);
+      // bind-pose world transforms = FK of the bind local pose (no animation)
+      const bWQ=Array.from({length:n},()=>new THREE.Quaternion());
+      const bWP=Array.from({length:n},()=>new THREE.Vector3());
+      for(let j=0;j<n;j++){ const par=skel.parents[j];
+        if(par<0){ bWQ[j].copy(bindQ[j]); bWP[j].copy(bindT[j]); }
+        else { bWQ[j].multiplyQuaternions(bWQ[par],bindQ[j]); bWP[j].copy(bindT[j]).applyQuaternion(bWQ[par]).add(bWP[par]); } }
+      const invBind=bWQ.map((q,j)=>new THREE.Matrix4().compose(bWP[j],q,ONE).invert());
+      const skinMat=Array.from({length:n},()=>new THREE.Matrix4());
+      const nv=skin.vertexCount, bind=skin.positions, bi=skin.boneIdx, bw=skin.boneWt;
+      const mGeo=new THREE.BufferGeometry();
+      const mPos=new Float32Array(nv*3); mGeo.setAttribute('position',new THREE.BufferAttribute(mPos,3));
+      mGeo.setIndex(skin.indices.length>65535?new THREE.BufferAttribute(new Uint32Array(skin.indices),1):new THREE.BufferAttribute(new Uint16Array(skin.indices),1));
+      const mMat=new THREE.MeshPhongMaterial({color:0xb9c0c8,specular:0x20242a,shininess:14,flatShading:true,side:THREE.DoubleSide});
+      const mesh=new THREE.Mesh(mGeo,mMat); sc.add(mesh);
+      const vp=new THREE.Vector3(), acc=new THREE.Vector3(), tv=new THREE.Vector3(), animMat=new THREE.Matrix4();
+      skinApply=()=>{ for(let j=0;j<n;j++){ animMat.compose(wP[j],wQ[j],ONE); skinMat[j].multiplyMatrices(animMat,invBind[j]); }
+        for(let v=0;v<nv;v++){ vp.set(bind[v*3],bind[v*3+1],bind[v*3+2]); acc.set(0,0,0); let tw=0;
+          for(let k=0;k<4;k++){ const w=bw[v*4+k]; if(!w) continue; const b=bi[v*4+k]; const m=skinMat[b]; if(!m) continue;
+            tv.copy(vp).applyMatrix4(m); acc.addScaledVector(tv,w); tw+=w; }
+          if(tw>0) acc.multiplyScalar(1/tw); else acc.copy(vp);
+          NP(acc,tv); mPos[v*3]=tv.x; mPos[v*3+1]=tv.y; mPos[v*3+2]=tv.z; }
+        mGeo.attributes.position.needsUpdate=true; mGeo.computeBoundingSphere(); };
+    }
+    apply=(f)=>{
+      fkAt(f);
+      for(let j=0;j<n;j++){ NP(wP[j],outV); jArr[j*3]=outV.x; jArr[j*3+1]=outV.y; jArr[j*3+2]=outV.z; }
+      let s=0;
+      for(let j=0;j<n;j++){ const par=skel.parents[j]; if(par<0) continue;
+        segArr[s++]=jArr[par*3]; segArr[s++]=jArr[par*3+1]; segArr[s++]=jArr[par*3+2];
+        segArr[s++]=jArr[j*3];   segArr[s++]=jArr[j*3+1];   segArr[s++]=jArr[j*3+2]; }
+      jGeo.attributes.position.needsUpdate=true; segGeo.attributes.position.needsUpdate=true;
+      if(skinApply) skinApply();
+      const fl=document.getElementById('animframe'); if(fl) fl.textContent='frame '+f.toFixed(1)+' / '+r.frames;
+      const sb=document.getElementById('animscrub'); if(sb&&document.activeElement!==sb) sb.value=f;
+    };
+    if(stat) stat.textContent=`Posed on ${skel.name} (${matched}/${n} bones)`
+      + (hasMesh?` · skinned mesh ${skin.vertexCount.toLocaleString()} verts`:'')
+      + (skel.fkError!=null?` · FK err ${skel.fkError}`:'');
+  } else {
+    // ---- fallback: local per-bone transforms (points at translations + focus-triad) ----
+    const tb=r.tracks.filter(t=>t.trn);
+    let mn=[1e9,1e9,1e9],mx=[-1e9,-1e9,-1e9];
+    tb.forEach(t=>t.trn.forEach(k=>{for(let j=0;j<3;j++){if(k[j+1]<mn[j])mn[j]=k[j+1];if(k[j+1]>mx[j])mx[j]=k[j+1];}}));
+    const has=tb.length>0, ctr=has?[(mn[0]+mx[0])/2,(mn[1]+mx[1])/2,(mn[2]+mx[2])/2]:[0,0,0];
+    let scl=has?1.6/Math.max(mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2],1e-3):1;
+    const NP=t=>[(t[0]-ctr[0])*scl,(t[2]-ctr[2])*scl,-(t[1]-ctr[1])*scl];   // Z-up -> Y-up
+    const pgeo=new THREE.BufferGeometry(); const parr=new Float32Array(Math.max(tb.length,1)*3);
+    pgeo.setAttribute('position',new THREE.BufferAttribute(parr,3));
+    sc.add(new THREE.Points(pgeo,new THREE.PointsMaterial({color:0x59c2ff,size:0.05,sizeAttenuation:true})));
+    const trailGrp=new THREE.Group(); sc.add(trailGrp);
+    tb.forEach(t=>{ if(t.trn.length<2) return; const g=new THREE.BufferGeometry(); const a=new Float32Array(t.trn.length*3);
+      t.trn.forEach((k,i)=>{const p=NP([k[1],k[2],k[3]]); a[i*3]=p[0];a[i*3+1]=p[1];a[i*3+2]=p[2];});
+      g.setAttribute('position',new THREE.BufferAttribute(a,3));
+      trailGrp.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:0x2f6ea8,transparent:true,opacity:0.5}))); });
+    const triad=new THREE.AxesHelper(0.6);
+    const firstRot=r.tracks.find(t=>t.rot); sc.add(triad);
+    const tmpQ=new THREE.Quaternion(), tmpV=new THREE.Vector3();
+    let showTrail=true; const chk=document.getElementById('animtrail'); if(chk) chk.onchange=e=>{showTrail=e.target.checked;};
+    apply=(f)=>{
+      let i=0; tb.forEach(t=>{const s=_sampleKeys(t.trn,f);
+        const p=NP([s.a[1]+(s.b[1]-s.a[1])*s.t,s.a[2]+(s.b[2]-s.a[2])*s.t,s.a[3]+(s.b[3]-s.a[3])*s.t]);
+        parr[i*3]=p[0];parr[i*3+1]=p[1];parr[i*3+2]=p[2]; i++;});
+      pgeo.attributes.position.needsUpdate=true; trailGrp.visible=showTrail;
+      if(firstRot){ _sampleRot(firstRot.rot,f,tmpQ); triad.quaternion.copy(tmpQ);
+        if(firstRot.trn){ const s=_sampleKeys(firstRot.trn,f); const p=NP([s.a[1],s.a[2],s.a[3]]); triad.position.set(p[0],p[1],p[2]); } }
+      const fl=document.getElementById('animframe'); if(fl) fl.textContent='frame '+f.toFixed(1)+' / '+r.frames;
+      const sb=document.getElementById('animscrub'); if(sb&&document.activeElement!==sb) sb.value=f;
+    };
+    if(stat) stat.textContent=skel?"Can't read this model's skeleton. Showing bones only.":'No matching model. Showing bones only.';
+  }
+
+  // ---- shared camera orbit + controls + loop ----
+  let frame=0, playing=true, speed=1, last=performance.now();
+  let rx=0.35, ry=0.6, dist=3.2, dragging=false, px=0, py=0;
+  function place(){ cam.position.set(dist*Math.cos(rx)*Math.sin(ry), dist*Math.sin(rx)+0.3, dist*Math.cos(rx)*Math.cos(ry)); cam.lookAt(0,0.1,0); }
+  cv.onpointerdown=e=>{dragging=true;px=e.clientX;py=e.clientY;cv.setPointerCapture(e.pointerId);};
+  cv.onpointerup=()=>{dragging=false;};
+  cv.onpointermove=e=>{ if(!dragging)return; ry-=(e.clientX-px)*0.01; rx+=(e.clientY-py)*0.01;
+    rx=Math.max(-1.5,Math.min(1.5,rx)); px=e.clientX; py=e.clientY; };
+  cv.onwheel=e=>{e.preventDefault(); dist=Math.max(0.4,Math.min(20,dist*(1+Math.sign(e.deltaY)*0.1)));};
+  const pb=document.getElementById('animplay'); if(pb){ pb.textContent='⏸'; pb.onclick=()=>{playing=!playing; pb.textContent=playing?'⏸':'▶'; last=performance.now();}; }
+  const sb=document.getElementById('animscrub'); if(sb) sb.oninput=()=>{frame=parseFloat(sb.value); playing=false; if(pb)pb.textContent='▶'; apply(frame);};
+  const sp=document.getElementById('animspeed'); if(sp) sp.onchange=e=>{speed=parseFloat(e.target.value);};
+  apply(0);
+  function loop(){ if(!document.getElementById('animcanvas')){_animRAF=null;return;}
+    const now=performance.now(), dt=(now-last)/1000; last=now;
+    if(playing && r.frames>0){ frame+=dt*fps*speed; if(frame>maxF) frame=frame%maxF; apply(frame); }
+    place(); rn.render(sc,cam); _animRAF=requestAnimationFrame(loop); }
+  loop();
+}
+// ---- fx sampled-curve visualization (color-over-life strip + alpha/size line charts) ----
+function fxSpark(pts,ymin,ymax,color,w,h){ // pts: [[t,v],...] with t 0..1
+  w=w||220;h=h||54;const pad=4;const rng=(ymax-ymin)||1;
+  const X=t=>pad+t*(w-2*pad), Y=v=>h-pad-((v-ymin)/rng)*(h-2*pad);
+  const d=pts.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
+  const dots=pts.map(p=>`<circle cx="${X(p[0]).toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="2" fill="${color}"/>`).join('');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><path d="${d}" fill="none" stroke="${color}" stroke-width="1.5"/>${dots}</svg>`;
+}
+function fxCurvesHtml(cv){
+  if(!cv||!cv.elements) return '';
+  const banner = cv.note ? `<div class="fxnote" style="margin:0 0 8px">ⓘ ${esc(cv.note)}</div>` : '';
+  const els = cv.elements.map(el=>{
+    const vis=el.visSamples||[], vel=el.velSamples||[];
+    let body='';
+    if(vis.length){
+      const n=vis.length, t=i=>n>1?i/(n-1):0;
+      // color-over-life strip (RGB), and alpha as an overlaid gradient handled separately
+      const stops=vis.map((s,i)=>`rgb(${s.color[0]},${s.color[1]},${s.color[2]}) ${(t(i)*100).toFixed(1)}%`).join(', ');
+      body+=`<div class="fxc"><span class="cl">color over life</span>
+        <div class="fxcolorstrip" style="background:linear-gradient(90deg, ${stops})"></div></div>`;
+      body+=`<div class="fxc"><span class="cl">alpha</span>${fxSpark(vis.map((s,i)=>[t(i),s.color[3]/255]),0,1,'#4ec9b0')}</div>`;
+      const sx=vis.map((s,i)=>[t(i),s.size[0]]), sy=vis.map((s,i)=>[t(i),s.size[1]]);
+      const smax=Math.max(1,...sx.map(p=>p[1]),...sy.map(p=>p[1]));
+      body+=`<div class="fxc"><span class="cl">size x/y (max ${smax.toFixed(1)})</span>
+        <svg width="220" height="54" viewBox="0 0 220 54"><rect width="220" height="54" fill="#141414"/>
+        ${fxSpark(sx,0,smax,'#e5c07b').replace(/^<svg[^>]*>|<\/svg>$/g,'')}
+        ${fxSpark(sy,0,smax,'#1177bb').replace(/^<svg[^>]*>|<\/svg>$/g,'')}</svg></div>`;
+    }
+    if(vel.length){
+      const n=vel.length,t=i=>n>1?i/(n-1):0;
+      const lv=vel.map((s,i)=>[t(i),s.local.velocity[0]]);
+      const vr=Math.max(1,...vel.flatMap(s=>s.local.velocity.map(Math.abs)));
+      body+=`<div class="fxc"><span class="cl">local vel.x (±${vr.toFixed(1)})</span>${fxSpark(lv,-vr,vr,'#c586c0')}</div>`;
+    }
+    const src=s=>s?(s==='inline'?'inline':(s==='null'?'—':'shared')):'';   // pointer status → short label
+    const tags=[`vis×${el.visSampleCount}`,`vel×${el.velSampleCount}`,`vis:${el.visualCount}`,
+      `vel:${src(el.velPtr)}`,`clr:${src(el.visPtr)}`,el.order||''].filter(Boolean)
+      .map(x=>`<span class="tag">${esc(x)}</span>`).join('');
+    const note = el.note ? `<div class="fxnote">⚠ ${esc(el.note)}</div>` : '';
+    return `<div class="fxel"><div class="eh">element ${el.index} ${tags}</div>
+      <div class="eb">${body||'<span class="cl">no curves recovered</span>'}</div>${note}</div>`;
+  }).join('');
+  return banner+els;
+}
+// ---- HKS Lua disassembly view ----
+function luaSection(title, open, bodyHtml){
+  const id='ls'+Math.random().toString(36).slice(2,8);
+  return `<div class="luasec"><div class="h" data-tg="${id}">${open?'▾':'▸'} ${title}</div>
+    <div class="luabody" id="${id}" ${open?'':'hidden'}>${bodyHtml}</div></div>`;
+}
+function luaDisRows(insns){
+  return (insns||[]).map(ins=>`<tr><td class="idx">${ins.i}</td>`+
+    `<td class="op">${esc(ins.name||('OP_'+ins.op))}</td>`+
+    `<td>${esc(ins.text||'')}</td>`+
+    `<td class="k">${ins.const!=null?esc(String(ins.const)):
+        (ins.proto_index!=null?('→ fn #'+ins.proto_index):(ins.proto!=null?'proto#'+ins.proto:''))}</td></tr>`).join('');
+}
+function luaConstRows(consts){
+  return (consts||[]).map(c=>`<tr><td class="idx">K${c.i}</td><td>${esc(c.type)}</td>`+
+    `<td class="k">${esc(typeof c.value==='string'?JSON.stringify(c.value):String(c.value))}</td></tr>`).join('');
+}
+function luaFnBody(fn){
+  let b='';
+  if(fn.source&&fn.source.length)
+    b+=`<pre class="luasrc">${esc(fn.source.join('\n'))}</pre>`;
+  b+=luaSection(`Disassembly (${(fn.instructions||[]).length})`, !(fn.source&&fn.source.length),
+    `<table class="disc"><thead><tr><th>#</th><th>opcode</th><th>instruction</th><th>resolved</th></tr></thead>`+
+    `<tbody>${luaDisRows(fn.instructions)}</tbody></table>`);
+  if((fn.constants||[]).length) b+=luaSection(`Constants (${fn.constants.length})`, false,
+    `<table class="disc"><thead><tr><th>idx</th><th>type</th><th>value</th></tr></thead><tbody>${luaConstRows(fn.constants)}</tbody></table>`);
+  return b;
+}
+function luaTreeHtml(pt){
+  if(!pt||!pt.functions||!pt.functions.length) return '';
+  const inner=pt.functions.map(fn=>{
+    const pad=fn.depth?('&nbsp;'.repeat(fn.depth*3)+'└ '):'';
+    const kids=fn.sub_count?`, <b>${fn.sub_count}</b> nested`:'';
+    const title=`${pad}fn <b>#${fn.index}</b> <span class="m">@${fn.code_start}</span> — `+
+      `${fn.sizecode} instr, ${fn.params} params, ${fn.registers} regs${kids}`;
+    return luaSection(title, false, luaFnBody(fn));
+  }).join('');
+  const status = pt.complete ? `✓ complete — all ${pt.count} functions parsed to EOF (${pt.end_offset})`
+                             : `⚠ partial (${pt.count} functions, stopped: ${esc(pt.error||'?')})`;
+  return luaSection(`All functions — ${pt.count} (nested proto tree) &nbsp;<span class="m">${status}</span>`, true, inner);
+}
+function luaViewHtml(r){
+  const dis=r.disasm||{}; const pt=r.proto_tree||{};
+  let html=`<div class="luahdr">HKS Lua — format <b>0x${(r.header.hks_format).toString(16)}</b>, `+
+    `${r.types.length} types, <b>${r.string_count}</b> string symbols`;
+  if(pt.count) html+=` · <b>${pt.count}</b> functions`;
+  else if(dis.sizecode!=null) html+=` · top function: <b>${dis.sizecode}</b> instr, <b>${(dis.constants||[]).length}</b> constants`;
+  html+='</div>';
+  html+=`<div class="luawarn">Decompiled source is approximate: some control flow shows as <code>goto</code>, and local variables show as <code>rN</code>.</div>`;
+  html+=luaTreeHtml(pt);
+  if(dis.instructions){
+    html+=luaSection(`Top-level function: ${dis.instructions.length} instructions, ${dis.registers} registers`+
+      (dis.params!=null?`, ${dis.params} params`:''), false,
+      `<table class="disc"><thead><tr><th>#</th><th>opcode</th><th>instruction</th><th>resolved</th></tr></thead><tbody>${luaDisRows(dis.instructions)}</tbody></table>`+
+      luaSection(`Constants (${(dis.constants||[]).length})`, false,
+        `<table class="disc"><thead><tr><th>idx</th><th>type</th><th>value</th></tr></thead><tbody>${luaConstRows(dis.constants)}</tbody></table>`));
+  }
+  html+=luaSection(`All string symbols (${r.string_count})`, false,
+    `<pre style="margin:0;padding:8px">${esc((r.strings||[]).join('\n'))}</pre>`);
+  return html;
+}
+// ---- Lua rebuild: recompile HKS source (hksc) and splice it into the ff ----
+function imageReplacePanel(off,name){
+  const pick=NATIVE?`<button class="ghost" id="imgpickbtn">📂 Choose image…</button>`:'';
+  return `<div class="luasec"><div class="h" style="cursor:default">🎨 Replace texture</div>
+    <div style="padding:8px 4px">
+      <div class="matnote" style="margin-bottom:6px">Choose a PNG or JPG. It's resized and re-encoded to match this texture, then saved as a new <code>.ff</code> (inline texture) or <code>.xpak</code> (streamed texture). BC5/BC7 textures and compressed xpaks can't be replaced yet.</div>
+      <div style="display:flex;gap:6px;align-items:center">${pick}
+        <input id="imgpath" spellcheck="false" placeholder="path to a PNG or JPG, e.g. C:\\textures\\new.png"
+          style="flex:1;font:12px var(--mono);background:var(--bg0);color:var(--fg);border:1px solid var(--line);border-radius:5px;padding:6px 8px">
+      </div>
+      <div style="margin-top:6px"><button class="ghost" id="imgreplbtn">Replace</button> <span id="imgreplres"></span></div>
+    </div></div>`;
+}
+function wireImageReplace(off,name){
+  const btn=document.getElementById('imgreplbtn'); if(!btn)return;
+  const pb=document.getElementById('imgpickbtn');
+  if(pb) pb.onclick=async()=>{try{const p=await window.pywebview.api.pick_image();if(p)document.getElementById('imgpath').value=p;}catch(e){}};
+  btn.onclick=async()=>{
+    const path=document.getElementById('imgpath').value.trim(); const res=document.getElementById('imgreplres');
+    if(!path){res.innerHTML='<span style="color:var(--warn)">Enter an image path first.</span>';return;}
+    btn.disabled=true; res.innerHTML='<span class="spin"></span> encoding…';
+    const r=await api('/api/imagereplace',{ff:AFF,off,path});
+    btn.disabled=false;
+    if(r.error){res.innerHTML=`<span style="color:var(--bad)">✗ ${esc(r.error.slice(0,300))}</span>`;return;}
+    const kind=r.mode==='inline'?'new ff':'new xpak';
+    const dl=NATIVE?`<button class="ghost" id="imgsavebtn">💾 Save a copy…</button>`
+                   :`<a class="dl" href="/api/download?path=${encodeURIComponent(r.out)}">⬇ Download ${kind}</a>`;
+    res.innerHTML=`<span style="color:var(--ok)">✓ ${r.width}×${r.height} · ${r.mode} · ${(r.bytes/1024).toFixed(0)} KB</span> &nbsp; ${dl}`;
+    if(NATIVE){const sb=document.getElementById('imgsavebtn'); if(sb) sb.onclick=async()=>{try{await window.pywebview.api.save_copy(r.out, r.out.split(/[\\/]/).pop());}catch(e){}};}
+  };
+}
+function luaBuildPanel(r,off,name){
+  if(!r.recompile_available) return `<div class="matnote" style="margin-top:10px">To edit and recompile this Lua you need <b>hksc</b>. See the README (Dependencies).</div>`;
+  return `<div class="luasec"><div class="h" style="cursor:default">🔨 Recompile Lua</div>
+    <div style="padding:8px 4px">
+      <div class="matnote" style="margin-bottom:6px">Paste HKS Lua source. It's compiled with hksc and written back into this rawfile as a new <code>.ff</code>.</div>
+      <textarea id="luasrc" spellcheck="false" placeholder="-- paste your HKS Lua source here\nlocal CoD = CoD or {}\nreturn CoD"></textarea>
+      <div style="margin-top:6px"><button class="ghost" id="luabuildbtn">Compile</button> <span id="luabuildres"></span></div>
+    </div></div>`;
+}
+function wireLuaBuild(off,name){
+  const btn=document.getElementById('luabuildbtn'); if(!btn)return;
+  btn.onclick=async()=>{
+    const src=document.getElementById('luasrc').value; const res=document.getElementById('luabuildres');
+    if(!src.trim()){res.innerHTML='<span style="color:var(--warn)">Paste some source first.</span>';return;}
+    btn.disabled=true; res.innerHTML='<span class="spin"></span> compiling…';
+    const r=await api('/api/luabuild',{ff:AFF,off,source:src});
+    btn.disabled=false;
+    if(r.error){res.innerHTML=`<span style="color:var(--bad)">✗ ${esc(r.error.slice(0,300))}</span>`;return;}
+    const dl=NATIVE?`<button class="ghost" id="luasavebtn">💾 Save a copy…</button>`
+                   :`<a class="dl" href="/api/download?path=${encodeURIComponent(r.out_path)}">⬇ Download new ff</a>`;
+    res.innerHTML=`<span style="color:var(--ok)">✓ Done · ${r.orig_len}→${r.new_len} bytes · ${(r.out_size/1048576).toFixed(1)} MB</span> &nbsp; ${dl}`;
+    if(NATIVE){const sb=document.getElementById('luasavebtn'); if(sb) sb.onclick=async()=>{try{await window.pywebview.api.save_copy(r.out_path, r.out_path.split(/[\\/]/).pop());}catch(e){}};}
+  };
+}
+async function loadSymbols(){if(!FF)return; $('#symlist').innerHTML='<div class="sym m">Indexing… (decompiling all scripts)</div>';
+  const r=await api('/api/symbols',{ff:FF.ff}); SYMS=r.symbols||[]; renderSymbols();}
+function renderSymbols(){const q=$('#symfilter').value.toLowerCase();
+  const list=SYMS.filter(s=>!q||s.name.toLowerCase().includes(q)).slice(0,600);
+  $('#symlist').innerHTML=list.map(s=>`<div class="sym" data-s="${s.script}" data-l="${s.line}">${s.name}<span class="fl">${s.flags||''}</span><span class="m"> ${s.script.split('/').pop()}:${s.line} · p${s.params}</span></div>`).join('')||'<div class="sym m">no matches</div>';
+  $('#symlist').querySelectorAll('.sym[data-s]').forEach(el=>el.onclick=()=>goTo(el.dataset.s,+el.dataset.l));}
+$('#symfilter').addEventListener('input',renderSymbols);
+
+// ---- navigation: go to a script+line ----
+async function goTo(script,line){await openScript(script); if(line){editor.revealLineInCenterIfOutsideViewport(line);editor.setPosition({lineNumber:line,column:1});editor.focus();}}
+
+// ---- xrefs: go to definition / find references ----
+async function gotoDef(){const w=wordAtCursor();if(!w||!FF)return; const r=await api('/api/xrefs',{ff:FF.ff,symbol:w});
+  const d=(r.refs||[]).find(x=>x.kind==='def'); if(d)goTo(d.script,d.line); else log("no definition found for "+w,'warn');}
+async function findRefs(){const w=wordAtCursor();if(!w||!FF)return; const r=await api('/api/xrefs',{ff:FF.ff,symbol:w}); renderRefs(w,r.refs||[]);}
+function renderRefs(sym,refs){$('#refs').innerHTML=`<div class="l"><b>${refs.length}</b> reference(s) to <b>${sym}</b></div>`+
+  refs.map(r=>`<div class="row" data-s="${r.script}" data-l="${r.line}"><span class="k">${r.kind}</span><span class="loc">${r.script.split('/').pop()}:${r.line}</span>  ${r.text.replace(/</g,'&lt;')}</div>`).join('');
+  $('#refs').querySelectorAll('.row').forEach(el=>el.onclick=()=>goTo(el.dataset.s,+el.dataset.l));
+  openBottom('refs');}
+
+// ---- problems (diagnostics) ----
+let diagTimer=null;
+function scheduleDiag(){clearTimeout(diagTimer);diagTimer=setTimeout(runDiag,900);}
+async function runDiag(){if(!FF)return; const edits={}; tabs.filter(t=>t.dirty).forEach(t=>edits[t.name]=t.model.getValue());
+  if(!Object.keys(edits).length){renderProblems([]);return;}
+  try{const r=await api('/api/diagnostics',{ff:FF.ff,edits}); renderProblems(r.problems||[]);}catch(e){}}
+function renderProblems(probs){const n=probs.length; const c=$('#probcount'); if(c){c.textContent=n?n:''; c.hidden=!n;}
+  $('#problems').innerHTML=n?probs.map(p=>`<div class="row ${p.severity}" data-s="${p.script||''}" data-l="${p.line||''}"><span class="k">${p.severity}</span><span class="loc">${(p.script||'').split('/').pop()}${p.line?':'+p.line:''}</span>  ${(p.message||'').replace(/</g,'&lt;')}</div>`).join('')
+    :'<div class="l m">no problems</div>';
+  $('#problems').querySelectorAll('.row[data-s]').forEach(el=>{if(el.dataset.s)el.onclick=()=>goTo(el.dataset.s,+el.dataset.l||0);});}
+
+// ---- quick-open palette (Ctrl+P) ----
+let palSel=0, palList=[];
+function openPalette(){if(!FF)return; if(!SYMS.length){loadSymbols().then(()=>{});} $('#palette').classList.add('open');$('#palin').value='';$('#palin').focus();palRender();}
+function closePalette(){$('#palette').classList.remove('open');}
+function palRender(){const q=$('#palin').value.toLowerCase();
+  palList=SYMS.filter(s=>!q||s.name.toLowerCase().includes(q)).slice(0,50); palSel=0;
+  $('#palresults').innerHTML=palList.map((s,i)=>`<div class="p ${i===0?'sel':''}" data-i="${i}">${s.name}<span class="m">${s.script.split('/').pop()}:${s.line}</span></div>`).join('');
+  $('#palresults').querySelectorAll('.p').forEach(el=>el.onclick=()=>{const s=palList[+el.dataset.i];closePalette();goTo(s.script,s.line);});}
+$('#palin').addEventListener('input',palRender);
+$('#palin').addEventListener('keydown',e=>{
+  if(e.key==='Escape')closePalette();
+  else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();palSel=Math.max(0,Math.min(palList.length-1,palSel+(e.key==='ArrowDown'?1:-1)));
+    $('#palresults').querySelectorAll('.p').forEach((el,i)=>el.classList.toggle('sel',i===palSel));$('#palresults .p.sel')?.scrollIntoView({block:'nearest'});}
+  else if(e.key==='Enter'&&palList[palSel]){const s=palList[palSel];closePalette();goTo(s.script,s.line);}});
+$('#palette').addEventListener('click',e=>{if(e.target.id==='palette')closePalette();});
+window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&(e.key==='p'||e.key==='t')){e.preventDefault();openPalette();}});
+
+// desktop (pywebview) mode: native file dialogs
+let NATIVE=false;
+function enableNative(){NATIVE=true;const b=$('#browsebtn');b.style.display='';
+  $('#ffpath').placeholder='Browse for a zm_mod.ff, or paste a path…';
+  b.onclick=async()=>{try{const p=await window.pywebview.api.pick_ff();if(p){$('#ffpath').value=p;openFF();}}catch(e){log('pick failed: '+e,'err');}};}
+if(window.pywebview) enableNative(); else window.addEventListener('pywebviewready',enableNative);
+
+// ---- FF navigator: browse workshop + local mods by NAME ----
+let NAVMODS=[];
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function fmtSize(n){return n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?Math.round(n/1024)+' KB':n+' B';}
+function closeNav(){$('#nav').classList.remove('open');}
+async function openNav(){
+  $('#nav').classList.add('open'); $('#navfilter').value='';
+  $('#navlist').innerHTML='<div class="navmod m">scanning workshop + local mods…</div>';
+  let r; try{ r=await fetch('/api/workshop').then(x=>x.json()); }
+  catch(e){ $('#navlist').innerHTML='<div class="navmod m">error: '+esc(e)+'</div>'; return; }
+  NAVMODS=(r.mods||[]).concat(r.base||[]);   // user mods first, then the retail base-game ff groups (browse-only)
+  if(!NAVMODS.length){ $('#navlist').innerHTML='<div class="navmod m">No mods with fastfiles found under '+esc(r.game_root||'the game folder')+'. Paste an ff path instead.</div>'; return; }
+  navRender(); $('#navfilter').focus();
+}
+function navRender(){
+  const q=$('#navfilter').value.toLowerCase();
+  const rows=NAVMODS.map((m,i)=>[i,m]).filter(([i,m])=>!q||m.name.toLowerCase().includes(q)||m.ffs.some(f=>f.name.toLowerCase().includes(q)));
+  if(!rows.length){ $('#navlist').innerHTML='<div class="navmod m">no matches</div>'; return; }
+  $('#navlist').innerHTML=rows.map(([i,m])=>`<div class="navmod" data-i="${i}">
+      <div class="nm"><span class="caret">▶</span>${esc(m.name)}<span class="src">${esc(m.source)}</span><span class="cnt">${m.ffs.length} ff</span></div>
+      <div class="ffs">${m.ffs.map((f,j)=>`<div class="ffrow" data-i="${i}" data-j="${j}">${esc(f.name)}<span class="sz">${fmtSize(f.size)}</span></div>`).join('')}</div>
+    </div>`).join('');
+  $('#navlist').querySelectorAll('.navmod .nm').forEach(el=>el.onclick=()=>el.parentElement.classList.toggle('exp'));
+  $('#navlist').querySelectorAll('.ffrow').forEach(el=>el.onclick=()=>{
+    const f=NAVMODS[+el.dataset.i].ffs[+el.dataset.j]; $('#ffpath').value=f.path; closeNav(); openFF(); });
+  if(rows.length<=4) $('#navlist').querySelectorAll('.navmod').forEach(el=>el.classList.add('exp'));
+}
+$('#navbtn').onclick=openNav;
+$('#navclose').onclick=closeNav;
+$('#nav').addEventListener('click',e=>{if(e.target.id==='nav')closeNav();});
+$('#navfilter').addEventListener('input',navRender);
+$('#navfilter').addEventListener('keydown',e=>{if(e.key==='Escape')closeNav();});
+
+// log panel open by default; it fills as you work
+openBottom('log');
+loadDeps();
+</script>
+</body>
+</html>
